@@ -403,6 +403,7 @@
         if (currentMode !== 'edit_node') {
             setMode('paint');
         }
+        updateBoard();
     }
 
     function setMode(mode) {
@@ -754,6 +755,7 @@
     // -------------------------------------------------------------
     function updateBoard() {
         colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
+        let totalOccupied = 0;
         Object.entries(areaStatus).forEach(([k, c]) => {
             const [kx, ky] = k.split('-').map(Number);
             const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
@@ -761,22 +763,45 @@
             if (scores[c] !== undefined) {
                 scores[c] += pts;
                 counts[c]++;
+                totalOccupied++;
             }
         });
 
-        const list = colorList.map((c, i) => ({
+        // 占領中の色（count > 0）のみを抽出して得点降順でソート
+        const activeList = colorList.map((c, i) => ({
             hex: c,
             name: colorNames[i],
             score: scores[c] || 0,
             count: counts[c] || 0
-        })).sort((a, b) => b.score - a.score);
+        }))
+        .filter(item => item.count > 0)
+        .sort((a, b) => b.score - a.score);
 
         const container = document.getElementById('score-board');
         container.innerHTML = '';
-        list.forEach((item, rank) => {
+
+        // 全体制圧サマリー ＆ 使用中の色のみ表示バッジ
+        const summaryHeader = document.createElement('div');
+        summaryHeader.style.cssText = 'padding: 6px 4px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; margin-bottom: 6px;';
+        summaryHeader.innerHTML = '<span>占領中: <strong style="color:#fbbf24;">' + activeList.length + '</strong> 同盟 (' + totalOccupied + 'マス)</span><span style="font-size:10px; color:#34d399; background:rgba(5, 150, 105, 0.2); border:1px solid rgba(5, 150, 105, 0.4); padding:1px 5px; border-radius:4px;">使用色のみ表示</span>';
+        container.appendChild(summaryHeader);
+
+        if (activeList.length === 0) {
+            const emptyNotice = document.createElement('div');
+            emptyNotice.style.cssText = 'padding: 24px 12px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.6;';
+            emptyNotice.innerHTML = '<div style="font-size: 24px; margin-bottom: 8px;">🗺️</div><div>マスを塗ると、使われている同盟の獲得ポイントがここに表示されます</div>';
+            container.appendChild(emptyNotice);
+            return;
+        }
+
+        activeList.forEach((item, rank) => {
             const card = document.createElement('div');
             card.className = 'score-card';
             card.style.borderLeftColor = item.hex;
+            if (item.hex.toLowerCase() === selectedColor.toLowerCase()) {
+                card.style.borderColor = '#ffffff';
+                card.style.background = '#283548';
+            }
             card.onclick = () => updateSelectedColor(item.hex);
             card.innerHTML = 
                 '<div class="score-info">' +
