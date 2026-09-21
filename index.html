@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>陣取り戦場マップ (標準160マス・img/image.png) - 領地戦作戦シミュレーター</title>
     <style>
-        :root { --panel-width: 320px; }
+        :root { --panel-width: 340px; }
         * { box-sizing: border-box; }
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", sans-serif; margin: 0; background: #090d16; color: #f8fafc; height: 100vh; display: flex; overflow: hidden; user-select: none; }
         .main-wrapper { display: flex; width: 100%; height: 100%; }
@@ -27,13 +27,14 @@
         .btn-room:hover { background: #1d4ed8; }
         .controls { padding: 10px 12px; border-bottom: 1px solid #1e293b; background: #0f172a; display: flex; flex-direction: column; gap: 8px; }
         .row-group { display: flex; gap: 6px; align-items: center; }
-        .mode-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+        .mode-group { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
         .toggle-group { display: flex; background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 2px; }
-        .toggle-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 5px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .toggle-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 4px 6px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .toggle-btn.active { background: #2563eb; color: white; }
         #colorSelect { flex: 1; color: white; border: 1px solid #475569; padding: 7px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; height: 36px; }
-        .mode-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 7px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .mode-btn { background: #1e293b; color: #cbd5e1; border: 1px solid #334155; padding: 6px 2px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
         .mode-btn.active { background: #2563eb; color: white; border-color: #60a5fa; box-shadow: 0 0 8px rgba(37,99,235,0.6); }
+        .mode-btn.edit-active { background: #e11d48; color: white; border-color: #fb7185; box-shadow: 0 0 8px rgba(225,29,72,0.6); }
         .btn-gas-save { background: linear-gradient(135deg, #059669, #0d9488); color: white; border: none; padding: 9px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .btn-gas-save:hover { filter: brightness(1.1); }
         .btn-gas-fetch { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; padding: 7px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; }
@@ -52,6 +53,15 @@
         .gas-config-bar { font-size: 10px; color: #64748b; padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; background: #020617; }
         .gas-config-bar a { color: #38bdf8; text-decoration: none; }
         .gas-config-bar a:hover { text-decoration: underline; }
+        
+        /* Coordinate Editor Panel */
+        .node-tool-box { background: rgba(159, 18, 57, 0.25); border: 1px solid #be123c; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
+        .lv-btns { display: flex; gap: 3px; }
+        .lv-btn { flex: 1; background: #1e293b; color: #e2e8f0; border: 1px solid #475569; padding: 4px 0; border-radius: 4px; font-size: 10px; font-weight: bold; cursor: pointer; text-align: center; }
+        .lv-btn.active { background: #e11d48; color: white; border-color: #fb7185; }
+        .action-chip-row { display: flex; gap: 4px; flex-wrap: wrap; }
+        .action-chip { background: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+        .action-chip:hover { background: #334155; color: white; }
     </style>
 </head>
 <body>
@@ -59,7 +69,7 @@
 <div class="main-wrapper">
     <div id="map-outer">
         <div id="map-container">
-            <img id="baseImg" src="img/image.png" onerror="handleImageError(this)">
+            <img id="baseImg" src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
             <canvas id="mapCanvas"></canvas>
         </div>
     </div>
@@ -83,7 +93,7 @@
 
             <div class="row-group">
                 <select id="colorSelect" onchange="updateSelectedColor(this.value)"></select>
-                <button class="btn-reset" onclick="if(confirm('現在のマス塗りをすべてリセットしますか？')) { areaStatus={}; startPositions=[]; homePos=null; render(); updateBoard(); saveLocal(); }">クリア</button>
+                <button class="btn-reset" onclick="if(confirm('現在のマス塗りをすべてリセットしますか？')) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }">クリア</button>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; background:#020617; padding:4px 8px; border-radius:6px; border:1px solid #334155; font-size:11px;">
@@ -95,9 +105,41 @@
             </div>
 
             <div class="mode-group">
-                <button id="mode-paint" class="mode-btn active" onclick="setMode('paint')">🖌️ 塗り</button>
-                <button id="mode-start" class="mode-btn" onclick="setMode('start')">🚩 出撃</button>
-                <button id="mode-home" class="mode-btn" onclick="setMode('home')">🏰 本拠</button>
+                <button id="mode-paint" class="mode-btn active" onclick="setMode('paint')">
+                    <span>🖌️</span><span>塗り</span>
+                </button>
+                <button id="mode-edit_node" class="mode-btn" onclick="setMode('edit_node')" title="マス座標を配置・調整・登録するプロットモード">
+                    <span>📍</span><span>座標設定</span>
+                </button>
+                <button id="mode-start" class="mode-btn" onclick="setMode('start')">
+                    <span>🚩</span><span>出撃</span>
+                </button>
+                <button id="mode-home" class="mode-btn" onclick="setMode('home')">
+                    <span>🏰</span><span>本拠</span>
+                </button>
+            </div>
+
+            <!-- Coordinate setting tools when in edit mode -->
+            <div id="coordinateEditorBox" class="node-tool-box" style="display:none;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-weight:bold; color:#fda4af;">📍 座標設定ツール (<span id="nodeCountLabel">0</span>マス)</span>
+                    <span style="font-size:10px; color:#f43f5e;">クリックで追加</span>
+                </div>
+                <div class="lv-btns">
+                    <button class="lv-btn active" onclick="setPlacementLevel(1)" id="btn-lv-1">Lv1</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(2)" id="btn-lv-2">Lv2</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(3)" id="btn-lv-3">Lv3</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(4)" id="btn-lv-4">Lv4</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(5)" id="btn-lv-5">Lv5</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(6)" id="btn-lv-6">Lv6</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(7)" id="btn-lv-7">Lv7</button>
+                </div>
+                <div class="action-chip-row">
+                    <button class="action-chip" onclick="copyCoordinatesJson()" title="現在のマス座標配列をJSON形式でコピー">📋 座標JSONコピー</button>
+                    <button class="action-chip" onclick="importCoordinatesPrompt()" title="座標JSONを貼り付けてインポート">📥 JSON読込</button>
+                    <button class="action-chip" onclick="restoreDefault160()" title="160マスの標準座標を復元">🔄 160マス復元</button>
+                    <button class="action-chip" onclick="clearAllNodes()" style="color:#f87171;" title="全マス座標をクリア">🗑️ 全消去</button>
+                </div>
             </div>
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
@@ -129,7 +171,7 @@
     // -------------------------------------------------------------
     // マップ定義・同盟色設定
     // -------------------------------------------------------------
-    const mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
+    let mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
     const pointsConfig = {"1":100,"2":200,"3":600,"4":2000,"5":3000,"6":4000,"7":6000};
     const colorList = ["#e6194B","#3cb44b","#4363d8","#ffe119","#f58231","#911eb4","#38bdf8","#f032e6","#bfef45","#fabed4","#469990","#dcbeff","#9A6324","#800000","#aaffc3","#808000","#ffd8b1","#000075","#ff7b54","#0891b2","#d97706","#a9a9a9","#be123c","#145a32"];
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
@@ -162,20 +204,171 @@
     }
 
     // -------------------------------------------------------------
-    // キャンバス初期化
+    // キャンバス初期化 & オフスクリーン塗りつぶしレイヤー
     // -------------------------------------------------------------
     const canvas = document.getElementById('mapCanvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
     const paintCanvas = document.createElement('canvas'), pCtx = paintCanvas.getContext('2d', { willReadFrequently: true });
+    
     let selectedColor = colorList[0], currentMode = 'paint', scores = {}, counts = {}, areaStatus = {};
-    let startPositions = [], homePos = null, maskData = null;
+    let startPositions = [], homePos = null;
+    let maskData = null, isImageLoaded = false;
     let nodeDisplayMode = 'hidden';
+    let activePlacementLevel = 1;
+    let selectedNodeIndex = null;
+    let isDraggingNode = false;
+    let pointerDownPos = null;
 
     canvas.width = paintCanvas.width = 1200;
     canvas.height = paintCanvas.height = 1200;
 
+    function handleImageLoad(img) {
+        isImageLoaded = true;
+        createMaskFromImage(img);
+        redrawPaintLayer();
+        render();
+    }
+
     function handleImageError(img) {
         img.style.display = 'none';
+        isImageLoaded = false;
+        maskData = null;
+        redrawPaintLayer();
         render();
+    }
+
+    // 境界線（壁）マスクの解析
+    function createMaskFromImage(img) {
+        try {
+            const temp = document.createElement('canvas');
+            temp.width = 1200; temp.height = 1200;
+            const tCtx = temp.getContext('2d', { willReadFrequently: true });
+            tCtx.drawImage(img, 0, 0, 1200, 1200);
+            const imgData = tCtx.getImageData(0, 0, 1200, 1200);
+            const data = imgData.data;
+
+            for (let i = 0; i < data.length; i += 4) {
+                const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+                if (brightness < 85 && data[i+3] > 90) {
+                    data[i+3] = 255; // 壁
+                } else {
+                    data[i+3] = 0;   // 空間
+                }
+            }
+            maskData = data;
+        } catch (e) {
+            maskData = null;
+        }
+    }
+
+    // Flood Fill 塗りつぶし処理
+    function hexToRgb(hex) {
+        const c = hex.replace('#', '');
+        return {
+            r: parseInt(c.slice(0, 2), 16) || 0,
+            g: parseInt(c.slice(2, 4), 16) || 0,
+            b: parseInt(c.slice(4, 6), 16) || 0
+        };
+    }
+
+    function floodFill(targetCtx, startX, startY, rgb, radius) {
+        const w = 1200, h = 1200;
+        let cx = Math.max(0, Math.min(w - 1, Math.floor(startX)));
+        let cy = Math.max(0, Math.min(h - 1, Math.floor(startY)));
+
+        if (maskData) {
+            const sIdx = (cy * w + cx) * 4;
+            if (maskData[sIdx + 3] !== 0) {
+                let found = false;
+                for (let r = 1; r <= 35 && !found; r += 2) {
+                    for (let dx = -r; dx <= r && !found; dx += 2) {
+                        for (let dy = -r; dy <= r && !found; dy += 2) {
+                            const nx = cx + dx, ny = cy + dy;
+                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                                if (maskData[(ny * w + nx) * 4 + 3] === 0) {
+                                    cx = nx; cy = ny; found = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            const imgData = targetCtx.getImageData(0, 0, w, h);
+            const data = imgData.data;
+            const queue = [[cx, cy]];
+            const visited = new Uint8Array(w * h);
+            let filledCount = 0;
+            const maxPx = Math.floor(w * h * 0.15);
+
+            while (queue.length > 0 && filledCount < maxPx) {
+                const [x, y] = queue.pop();
+                const pos = y * w + x;
+                if (visited[pos]) continue;
+                visited[pos] = 1;
+
+                const i = pos * 4;
+                data[i] = rgb.r;
+                data[i+1] = rgb.g;
+                data[i+2] = rgb.b;
+                data[i+3] = 185;
+                filledCount++;
+
+                const neighbors = [[x+1, y], [x-1, y], [x, y+1], [x, y-1]];
+                for (const [nx, ny] of neighbors) {
+                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                        const nPos = ny * w + nx;
+                        if (!visited[nPos] && maskData[nPos * 4 + 3] === 0) {
+                            queue.push([nx, ny]);
+                        }
+                    }
+                }
+            }
+
+            targetCtx.putImageData(imgData, 0, 0);
+
+            if (filledCount < 90) {
+                targetCtx.save();
+                targetCtx.fillStyle = "rgb(" + rgb.r + "," + rgb.g + "," + rgb.b + ")";
+                targetCtx.globalAlpha = 0.75;
+                targetCtx.beginPath();
+                targetCtx.arc(startX, startY, radius, 0, Math.PI * 2);
+                targetCtx.fill();
+                targetCtx.restore();
+            }
+        } else {
+            // 画像なし・白紙時のヘックス領地塗り
+            targetCtx.save();
+            targetCtx.fillStyle = "rgb(" + rgb.r + "," + rgb.g + "," + rgb.b + ")";
+            targetCtx.globalAlpha = 0.72;
+            targetCtx.beginPath();
+            const sides = 6;
+            for (let s = 0; s < sides; s++) {
+                const angle = (s * 2 * Math.PI) / sides - Math.PI / 6;
+                const hx = startX + radius * Math.cos(angle);
+                const hy = startY + radius * Math.sin(angle);
+                if (s === 0) targetCtx.moveTo(hx, hy);
+                else targetCtx.lineTo(hx, hy);
+            }
+            targetCtx.closePath();
+            targetCtx.fill();
+            targetCtx.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.95)";
+            targetCtx.lineWidth = 3;
+            targetCtx.stroke();
+            targetCtx.restore();
+        }
+    }
+
+    function redrawPaintLayer() {
+        pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
+        Object.entries(areaStatus).forEach(([key, color]) => {
+            const [kx, ky] = key.split('-').map(Number);
+            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
+            if (!pt) return;
+            const px = pt.x * paintCanvas.width / 100, py = pt.y * paintCanvas.height / 100;
+            const rgb = hexToRgb(color);
+            const radius = Math.max(26, Math.min(52, (pt.lv || 1) * 7 + 22));
+            floodFill(pCtx, px, py, rgb, radius);
+        });
     }
 
     function initUI() {
@@ -189,11 +382,12 @@
             select.appendChild(opt);
         });
         updateSelectedColor(colorList[0]);
+        updateNodeCountLabel();
         loadLocal();
         updateBoard();
+        redrawPaintLayer();
         render();
 
-        // 部屋名がURLに指定されている場合は自動でGASから最新データを取得
         if (currentRoom) {
             loadFromGas(false);
         }
@@ -206,14 +400,36 @@
             select.value = val;
             select.style.backgroundColor = val;
         }
-        setMode('paint');
+        if (currentMode !== 'edit_node') {
+            setMode('paint');
+        }
     }
 
     function setMode(mode) {
         currentMode = mode;
-        document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.mode-btn').forEach(b => {
+            b.classList.remove('active');
+            b.classList.remove('edit-active');
+        });
         const btn = document.getElementById('mode-' + mode);
-        if (btn) btn.classList.add('active');
+        if (btn) {
+            if (mode === 'edit_node') btn.classList.add('edit-active');
+            else btn.classList.add('active');
+        }
+
+        const editBox = document.getElementById('coordinateEditorBox');
+        if (editBox) {
+            editBox.style.display = mode === 'edit_node' ? 'flex' : 'none';
+        }
+        render();
+    }
+
+    function setPlacementLevel(lv) {
+        activePlacementLevel = lv;
+        for (let i = 1; i <= 7; i++) {
+            const b = document.getElementById('btn-lv-' + i);
+            if (b) b.classList.toggle('active', i === lv);
+        }
     }
 
     function setDisplayMode(mode) {
@@ -221,6 +437,11 @@
         document.getElementById('toggle-badge').classList.toggle('active', mode === 'badge');
         document.getElementById('toggle-hidden').classList.toggle('active', mode === 'hidden');
         render();
+    }
+
+    function updateNodeCountLabel() {
+        const el = document.getElementById('nodeCountLabel');
+        if (el) el.textContent = mapMasterData.length;
     }
 
     function showStatus(text, type) {
@@ -235,37 +456,143 @@
     }
 
     // -------------------------------------------------------------
-    // クリック・タップ操作
+    // ポインタ操作 (塗りつぶし・座標プロット・ドラッグ)
     // -------------------------------------------------------------
     canvas.addEventListener('pointerdown', (e) => {
+        pointerDownPos = { x: e.clientX, y: e.clientY };
+        isDraggingNode = false;
+
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
         const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
 
+        if (currentMode === 'edit_node') {
+            // Check if existing node clicked
+            let nearestIdx = -1, minD = 40;
+            mapMasterData.forEach((p, idx) => {
+                const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+                const d = Math.hypot(px - x, py - y);
+                if (d < minD) { minD = d; nearestIdx = idx; }
+            });
+
+            if (nearestIdx !== -1) {
+                selectedNodeIndex = nearestIdx;
+                isDraggingNode = true;
+                render();
+            }
+        }
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+        if (currentMode === 'edit_node' && isDraggingNode && selectedNodeIndex !== null) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
+            const pctX = Number(((x / canvas.width) * 100).toFixed(2));
+            const pctY = Number(((y / canvas.height) * 100).toFixed(2));
+
+            mapMasterData[selectedNodeIndex].x = pctX;
+            mapMasterData[selectedNodeIndex].y = pctY;
+            render();
+        }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+        if (isDraggingNode) {
+            isDraggingNode = false;
+            redrawPaintLayer();
+            render();
+            return;
+        }
+
+        if (!pointerDownPos) return;
+        const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
+        pointerDownPos = null;
+        if (dist > 10) return; // Dragged
+
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+        const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
+        const pctX = Number(((x / canvas.width) * 100).toFixed(2));
+        const pctY = Number(((y / canvas.height) * 100).toFixed(2));
+
+        // 1. Start Mode
         if (currentMode === 'start') {
-            const idx = startPositions.findIndex(p => Math.sqrt((p.x - x)**2 + (p.y - y)**2) < 40);
+            const idx = startPositions.findIndex(p => Math.hypot(p.x - x, p.y - y) < 40);
             if (idx > -1) startPositions.splice(idx, 1);
             else startPositions.push({ x, y });
             saveLocal();
             render();
             return;
         }
+
+        // 2. Home Mode
         if (currentMode === 'home') {
-            homePos = (homePos && Math.sqrt((homePos.x - x)**2 + (homePos.y - y)**2) < 40) ? null : { x, y };
+            homePos = (homePos && Math.hypot(homePos.x - x, homePos.y - y) < 40) ? null : { x, y };
             saveLocal();
             render();
             return;
         }
 
-        let nearest = null, minDist = 9999;
-        mapMasterData.forEach(p => {
-            const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
-            const d = Math.sqrt((px - x)**2 + (py - y)**2);
-            if (d < minDist) { minDist = d; nearest = p; }
-        });
+        // 3. Edit Node (座標設定・追加・選択)
+        if (currentMode === 'edit_node') {
+            let nearestIdx = -1, minD = 35;
+            mapMasterData.forEach((p, idx) => {
+                const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+                const d = Math.hypot(px - x, py - y);
+                if (d < minD) { minD = d; nearestIdx = idx; }
+            });
 
-        if (nearest && minDist < 65) {
-            applyPaint(nearest);
+            if (nearestIdx !== -1) {
+                selectedNodeIndex = nearestIdx;
+            } else {
+                // 空白クリックで新しいマス座標を追加！
+                mapMasterData.push({ x: pctX, y: pctY, lv: activePlacementLevel });
+                selectedNodeIndex = mapMasterData.length - 1;
+                updateNodeCountLabel();
+            }
+            redrawPaintLayer();
+            render();
+            return;
+        }
+
+        // 4. Paint Mode (塗りつぶし・解除)
+        if (currentMode === 'paint') {
+            let nearest = null, minDist = 65;
+            mapMasterData.forEach(p => {
+                const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+                const d = Math.hypot(px - x, py - y);
+                if (d < minDist) { minDist = d; nearest = p; }
+            });
+
+            if (nearest) {
+                applyPaint(nearest);
+            }
+        }
+    });
+
+    // 右クリックでマス削除
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (currentMode === 'edit_node') {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
+            const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
+            let nearestIdx = -1, minD = 40;
+            mapMasterData.forEach((p, idx) => {
+                const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+                const d = Math.hypot(px - x, py - y);
+                if (d < minD) { minD = d; nearestIdx = idx; }
+            });
+            if (nearestIdx !== -1) {
+                if (confirm('マス #' + (nearestIdx + 1) + ' の座標を削除しますか？')) {
+                    mapMasterData.splice(nearestIdx, 1);
+                    selectedNodeIndex = null;
+                    updateNodeCountLabel();
+                    redrawPaintLayer();
+                    render();
+                }
+            }
         }
     });
 
@@ -276,28 +603,10 @@
         } else {
             areaStatus[key] = selectedColor;
         }
-        recalcPaintCanvas();
+        redrawPaintLayer();
         saveLocal();
         updateBoard();
         render();
-    }
-
-    function recalcPaintCanvas() {
-        pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-        Object.entries(areaStatus).forEach(([key, color]) => {
-            const [kx, ky] = key.split('-').map(Number);
-            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
-            if (!pt) return;
-            const px = pt.x * paintCanvas.width / 100, py = pt.y * paintCanvas.height / 100;
-            pCtx.save();
-            pCtx.fillStyle = color;
-            pCtx.globalAlpha = 0.72;
-            pCtx.beginPath();
-            const radius = Math.max(26, Math.min(50, (pt.lv || 1) * 6 + 22));
-            pCtx.arc(px, py, radius, 0, Math.PI * 2);
-            pCtx.fill();
-            pCtx.restore();
-        });
     }
 
     function render() {
@@ -306,248 +615,335 @@
         if (base && base.complete && base.naturalWidth > 0 && base.style.display !== 'none') {
             ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
         } else {
-            ctx.fillStyle = '#0f172a';
+            ctx.fillStyle = '#0b0f19';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // グリッド線
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            for (let x = 0; x <= canvas.width; x += 60) {
+                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+            }
+            for (let y = 0; y <= canvas.height; y += 60) {
+                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+            }
+            ctx.strokeStyle = '#334155';
+            ctx.setLineDash([4, 6]);
+            [160, 320, 480].forEach(r => {
+                ctx.beginPath(); ctx.arc(600, 600, r, 0, Math.PI * 2); ctx.stroke();
+            });
+            ctx.setLineDash([]);
         }
 
         ctx.drawImage(paintCanvas, 0, 0);
 
-        if (nodeDisplayMode === 'badge') {
-            mapMasterData.forEach(p => {
-                const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+        // マス表示
+        mapMasterData.forEach((p, idx) => {
+            const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
+            const isSelected = (currentMode === 'edit_node' && selectedNodeIndex === idx);
+
+            if (isSelected) {
                 ctx.beginPath();
-                ctx.arc(px, py, 12, 0, Math.PI * 2);
-                ctx.fillStyle = areaStatus[p.x + '-' + p.y] || '#1e293b';
+                ctx.arc(px, py, 26, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(244, 63, 94, 0.4)';
                 ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = '#fb7185';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+            }
+
+            if (currentMode === 'edit_node' || nodeDisplayMode === 'badge') {
+                const color = areaStatus[p.x + '-' + p.y];
+                const badgeRadius = p.lv >= 6 ? 16 : p.lv >= 4 ? 13 : 11;
+                ctx.beginPath();
+                ctx.arc(px, py, badgeRadius, 0, Math.PI * 2);
+                ctx.fillStyle = color ? color : '#181b22';
+                ctx.fill();
+                ctx.lineWidth = isSelected ? 2.5 : 2;
+                ctx.strokeStyle = isSelected ? '#38bdf8' : (color ? '#ffffff' : (p.lv === 7 ? '#f59e0b' : p.lv >= 5 ? '#ec4899' : p.lv >= 3 ? '#3b82f6' : '#64748b'));
                 ctx.stroke();
 
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 11px sans-serif';
+                ctx.font = 'bold ' + (p.lv >= 6 ? '12px' : '10px') + ' sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.fillText(p.lv, px, py);
-            });
-        }
+                ctx.fillText('' + p.lv, px, py);
 
-        ctx.font = "bold 42px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        startPositions.forEach(p => ctx.fillText("🚩", p.x, p.y));
-        if (homePos) ctx.fillText("🏰", homePos.x, homePos.y);
-    }
-
-    function updateBoard() {
-        const countsMap = {}, scoresMap = {};
-        colorList.forEach(c => { countsMap[c] = 0; scoresMap[c] = 0; });
-
-        Object.entries(areaStatus).forEach(([key, color]) => {
-            const [kx, ky] = key.split('-').map(Number);
-            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
-            const lv = pt ? pt.lv : 1;
-            countsMap[color] = (countsMap[color] || 0) + 1;
-            scoresMap[color] = (scoresMap[color] || 0) + (pointsConfig[lv] || 0);
-        });
-
-        const board = document.getElementById('score-board');
-        board.innerHTML = '';
-        const activeAlliances = [];
-        colorList.forEach((c, i) => {
-            if (countsMap[c] > 0) {
-                activeAlliances.push({ color: c, name: colorNames[i], score: scoresMap[c], count: countsMap[c] });
+                if (currentMode === 'edit_node') {
+                    ctx.font = '9px monospace';
+                    ctx.fillStyle = '#94a3b8';
+                    ctx.fillText(p.x + '%,' + p.y + '%', px, py + badgeRadius + 10);
+                }
             }
         });
-        activeAlliances.sort((a, b) => b.score - a.score);
 
-        activeAlliances.forEach(all => {
+        // フラグ・キャッスル
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        startPositions.forEach(p => {
+            ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 8;
+            ctx.fillText('🚩', p.x, p.y);
+            ctx.shadowBlur = 0;
+        });
+        if (homePos) {
+            ctx.shadowColor = 'rgba(0,0,0,0.9)'; ctx.shadowBlur = 10;
+            ctx.fillText('🏰', homePos.x, homePos.y);
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 座標設定補助機能 (JSONコピー・読込・復元)
+    // -------------------------------------------------------------
+    function copyCoordinatesJson() {
+        const json = JSON.stringify(mapMasterData, null, 2);
+        navigator.clipboard.writeText(json).then(() => {
+            showStatus('全' + mapMasterData.length + 'マスの座標JSONをクリップボードにコピーしました！', 'success');
+        }).catch(() => {
+            prompt('以下の座標JSONをコピーしてください:', json);
+        });
+    }
+
+    function importCoordinatesPrompt() {
+        const input = prompt('インポートするマス座標JSON配列を貼り付けてください:');
+        if (!input) return;
+        try {
+            const parsed = JSON.parse(input);
+            if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0].x === 'number') {
+                mapMasterData = parsed;
+                updateNodeCountLabel();
+                selectedNodeIndex = null;
+                redrawPaintLayer();
+                render();
+                showStatus(mapMasterData.length + 'マスの座標をインポートしました！', 'success');
+            } else {
+                alert('無効な座標JSON形式です。[{x: 50, y: 50, lv: 1}, ...] の形式にしてください。');
+            }
+        } catch (e) {
+            alert('JSON解析エラー: ' + e.message);
+        }
+    }
+
+    function restoreDefault160() {
+        if (confirm('標準の160マス座標を復元しますか？現在の座標は上書きされます。')) {
+            mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
+            updateNodeCountLabel();
+            selectedNodeIndex = null;
+            redrawPaintLayer();
+            render();
+            showStatus('標準160マスの座標を復元しました！', 'success');
+        }
+    }
+
+    function clearAllNodes() {
+        if (confirm('すべてのマス座標を消去して白紙にしますか？（ゼロから自由に座標を打てます）')) {
+            mapMasterData = [];
+            areaStatus = {};
+            selectedNodeIndex = null;
+            updateNodeCountLabel();
+            redrawPaintLayer();
+            render();
+            updateBoard();
+            showStatus('全マス座標をクリアしました。マップ上をクリックして新規座標を配置してください。', 'success');
+        }
+    }
+
+    // -------------------------------------------------------------
+    // 得点計算・同盟ランキング
+    // -------------------------------------------------------------
+    function updateBoard() {
+        colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
+        Object.entries(areaStatus).forEach(([k, c]) => {
+            const [kx, ky] = k.split('-').map(Number);
+            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
+            const pts = pointsConfig[pt ? pt.lv : 1] || 100;
+            if (scores[c] !== undefined) {
+                scores[c] += pts;
+                counts[c]++;
+            }
+        });
+
+        const list = colorList.map((c, i) => ({
+            hex: c,
+            name: colorNames[i],
+            score: scores[c] || 0,
+            count: counts[c] || 0
+        })).sort((a, b) => b.score - a.score);
+
+        const container = document.getElementById('score-board');
+        container.innerHTML = '';
+        list.forEach((item, rank) => {
             const card = document.createElement('div');
             card.className = 'score-card';
-            card.style.borderLeftColor = all.color;
-            card.onclick = () => updateSelectedColor(all.color);
-            card.innerHTML = '<div class="score-info"><div>' + all.name + '</div><div style="font-size:10px; color:#94a3b8; font-weight:normal;">' + all.count + ' マス占領</div></div><div class="score-val">' + all.score.toLocaleString() + ' <span style="font-size:10px;">pts</span></div>';
-            board.appendChild(card);
+            card.style.borderLeftColor = item.hex;
+            card.onclick = () => updateSelectedColor(item.hex);
+            card.innerHTML = 
+                '<div class="score-info">' +
+                    '<span style="color:#94a3b8; font-size:10px; margin-right:4px;">#' + (rank + 1) + '</span>' +
+                    '<span>' + item.name + '</span>' +
+                    '<div style="font-size:10px; color:#64748b; font-weight:normal;">占領: ' + item.count + 'マス</div>' +
+                '</div>' +
+                '<div class="score-val">' + item.score.toLocaleString() + '<span style="font-size:10px; color:#94a3b8; margin-left:2px;">pts</span></div>';
+            container.appendChild(card);
         });
-
-        if (activeAlliances.length === 0) {
-            board.innerHTML = '<div style="text-align:center; color:#64748b; padding-top:20px; font-size:12px;">マップ上のマスをタップして領地を占領してください</div>';
-        }
     }
 
     // -------------------------------------------------------------
-    // ローカルキャッシュ保存 & 読込
-    // -------------------------------------------------------------
-    function saveLocal() {
-        try {
-            const data = { areaStatus, startPositions, homePos, updatedAt: new Date().toISOString() };
-            localStorage.setItem('territory_room_' + currentRoom, JSON.stringify(data));
-        } catch (e) {}
-    }
-
-    function loadLocal() {
-        try {
-            const raw = localStorage.getItem('territory_room_' + currentRoom);
-            if (raw) {
-                const data = JSON.parse(raw);
-                areaStatus = data.areaStatus || {};
-                startPositions = data.startPositions || [];
-                homePos = data.homePos || null;
-                recalcPaintCanvas();
-            }
-        } catch (e) {}
-    }
-
-    // -------------------------------------------------------------
-    // Google Apps Script (GAS) クラウド保存
+    // GAS (Google Apps Script) クラウド同期
     // -------------------------------------------------------------
     async function saveToGas() {
-        if (!currentRoom) {
-            currentRoom = prompt('保存する部屋名を入力してください:', 'ギルドA') || 'main';
-            updateRoomHeaderDisplay();
+        if (!gasUrl) {
+            promptChangeGasUrl();
+            return;
         }
 
         const btn = document.getElementById('btnSaveGas');
-        if (btn) btn.disabled = true;
-        showStatus('☁️ GASに部屋「' + currentRoom + '」を保存中...', 'loading');
+        btn.disabled = true;
+        showStatus('GASに部屋「' + currentRoom + '」を保存中...', 'loading');
 
         const payload = {
             room: currentRoom,
-            roomId: currentRoom,
             data: {
                 roomName: currentRoom,
+                updatedAt: new Date().toISOString(),
                 areaStatus: areaStatus,
                 startPositions: startPositions,
                 homePos: homePos,
-                updatedAt: new Date().toISOString()
+                territories: mapMasterData
             }
         };
 
         try {
-            // mode: 'no-cors' と Content-Type: 'text/plain;charset=utf-8' でCORS preflight (OPTIONS) エラーを回避
             await fetch(gasUrl, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'text/plain;charset=utf-8'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             saveLocal();
-            showStatus('✅ 部屋「' + currentRoom + '」のデータをGASに保存しました！', 'success');
+            showStatus('部屋「' + currentRoom + '」の作戦データを保存しました！', 'success');
         } catch (err) {
-            console.error('GAS save error:', err);
-            showStatus('❌ GAS保存に失敗しました: ' + (err.message || '通信エラー'), 'error');
+            showStatus('保存に失敗しました: ' + err.message, 'error');
         } finally {
-            if (btn) btn.disabled = false;
+            btn.disabled = false;
         }
     }
 
-    // -------------------------------------------------------------
-    // Google Apps Script (GAS) クラウド読込
-    // -------------------------------------------------------------
-    async function loadFromGas(manual) {
-        if (!currentRoom) return;
+    async function loadFromGas(isManual) {
+        if (!gasUrl) return;
 
         const btn = document.getElementById('btnFetchGas');
         if (btn) btn.disabled = true;
-        if (manual) showStatus('🔄 部屋「' + currentRoom + '」をGASから読込中...', 'loading');
+        showStatus('部屋「' + currentRoom + '」をGASから同期中...', 'loading');
 
         try {
-            const targetUrl = new URL(gasUrl);
-            targetUrl.searchParams.set('room', currentRoom);
-            targetUrl.searchParams.set('_t', Date.now().toString());
+            const fetchUrl = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'room=' + encodeURIComponent(currentRoom) + '&_t=' + Date.now();
+            const res = await fetch(fetchUrl);
+            const json = await res.json();
 
-            const res = await fetch(targetUrl.toString(), {
-                method: 'GET',
-                headers: { 'Accept': 'application/json, text/plain, */*' }
-            });
-
-            if (res.ok) {
-                const text = (await res.text()).trim();
-                let parsedData = null;
-                try {
-                    const parsed = JSON.parse(text);
-                    parsedData = parsed.data || parsed;
-                } catch (e) {}
-
-                if (parsedData && parsedData.areaStatus) {
-                    areaStatus = parsedData.areaStatus || {};
-                    startPositions = parsedData.startPositions || [];
-                    homePos = parsedData.homePos || null;
-                    recalcPaintCanvas();
-                    render();
-                    updateBoard();
-                    saveLocal();
-                    if (manual) showStatus('✅ 部屋「' + currentRoom + '」の最新データをGASから取得しました！', 'success');
-                } else if (manual) {
-                    showStatus('ℹ️ 部屋「' + currentRoom + '」の保存データはまだありません。', 'loading');
+            if (json && json.success && json.data) {
+                const data = json.data;
+                if (data.areaStatus) areaStatus = data.areaStatus;
+                if (data.startPositions) startPositions = data.startPositions;
+                if (data.homePos !== undefined) homePos = data.homePos;
+                if (data.territories && Array.isArray(data.territories) && data.territories.length > 0) {
+                    mapMasterData = data.territories;
+                    updateNodeCountLabel();
                 }
+
+                saveLocal();
+                redrawPaintLayer();
+                updateBoard();
+                render();
+                showStatus('部屋「' + currentRoom + '」の最新作戦データを取得しました！', 'success');
+            } else if (isManual) {
+                showStatus('部屋「' + currentRoom + '」の保存データはまだありません。', 'success');
+            } else {
+                document.getElementById('statusMessage').style.display = 'none';
             }
         } catch (err) {
-            console.warn('GAS fetch error:', err);
-            if (manual) showStatus('❌ GAS取得エラー: ' + (err.message || '通信失敗'), 'error');
+            if (isManual) {
+                showStatus('最新取得に失敗しました (通信環境またはCORS)', 'error');
+            }
         } finally {
             if (btn) btn.disabled = false;
         }
     }
 
-    // -------------------------------------------------------------
-    // 部屋切替 & URL共有
-    // -------------------------------------------------------------
     function promptSwitchRoom() {
-        const input = prompt('移動または新しく作成する部屋名を入力してください:', currentRoom === 'main' ? '' : currentRoom);
-        if (input !== null) {
-            const nextRoom = input.trim() || 'main';
-            saveLocal();
-            currentRoom = nextRoom;
-
-            // URLのクエリパラメータを書き換え
-            const url = new URL(window.location.href);
-            if (nextRoom !== 'main') {
-                url.searchParams.set('room', nextRoom);
-            } else {
-                url.searchParams.delete('room');
-            }
-            window.history.replaceState({}, '', url.toString());
-
+        const next = prompt('移動・作成する部屋名を入力してください（例: 第1ギルド, 予選A）:', currentRoom);
+        if (next && next.trim() !== '') {
+            currentRoom = next.trim();
             updateRoomHeaderDisplay();
+            try {
+                const url = new URL(window.location.href);
+                url.searchParams.set('room', currentRoom);
+                window.history.pushState({}, '', url.toString());
+            } catch (e) {}
             loadLocal();
-            render();
+            redrawPaintLayer();
             updateBoard();
+            render();
             loadFromGas(true);
         }
     }
 
     function copyRoomLink() {
         const url = new URL(window.location.href);
-        if (currentRoom !== 'main') {
-            url.searchParams.set('room', currentRoom);
-        } else {
-            url.searchParams.delete('room');
-        }
+        url.searchParams.set('room', currentRoom);
         navigator.clipboard.writeText(url.toString()).then(() => {
-            showStatus('✅ 部屋「' + currentRoom + '」の共有URLをコピーしました！', 'success');
-            alert('部屋「' + currentRoom + '」の共有リンクをクリップボードにコピーしました！\n' + url.toString());
+            showStatus('部屋「' + currentRoom + '」の共有URLをコピーしました！', 'success');
         }).catch(() => {
-            prompt('以下のURLをコピーしてギルメンに共有してください:', url.toString());
+            prompt('共有リンク:', url.toString());
         });
     }
 
     function promptChangeGasUrl() {
-        const next = prompt('Google Apps Script (GAS) のウェブアプリURLを入力してください:', gasUrl);
+        const next = prompt('Google Apps Script の ウェブアプリURL を入力してください:', gasUrl);
         if (next !== null && next.trim() !== '') {
             gasUrl = next.trim();
             localStorage.setItem('territory_custom_gas_url', gasUrl);
-            alert('GAS Web App URLを更新しました！');
+            showStatus('GAS URLを更新しました！', 'success');
         }
     }
 
     function savePngImage() {
-        const link = document.createElement('a');
-        link.download = 'territory_map_' + currentRoom + '.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        const a = document.createElement('a');
+        a.download = 'territory_' + currentRoom + '_' + Date.now() + '.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+    }
+
+    function saveLocal() {
+        const state = {
+            areaStatus: areaStatus,
+            startPositions: startPositions,
+            homePos: homePos,
+            territories: mapMasterData
+        };
+        localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
+    }
+
+    function loadLocal() {
+        try {
+            const raw = localStorage.getItem('territory_save_room_' + currentRoom);
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                areaStatus = parsed.areaStatus || {};
+                startPositions = parsed.startPositions || [];
+                homePos = parsed.homePos || null;
+                if (parsed.territories && parsed.territories.length > 0) {
+                    mapMasterData = parsed.territories;
+                    updateNodeCountLabel();
+                }
+            } else {
+                areaStatus = {};
+                startPositions = [];
+                homePos = null;
+            }
+        } catch (e) {}
     }
 
     window.addEventListener('DOMContentLoaded', initUI);
