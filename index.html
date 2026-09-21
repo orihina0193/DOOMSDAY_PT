@@ -105,6 +105,9 @@
                         <span>🗑️</span><span>オールクリア</span>
                     </button>
                 </div>
+                <button onclick="openPointsModal()" style="background:#451a03; color:#fef3c7; border:1px solid #d97706; padding:6px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="Lv.1〜7の獲得ポイントや勝利目標スコアを設定">
+                    <span>🏆</span><span>マスのレベル別得点 ＆ 目標設定</span>
+                </button>
                 <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; pt-1; font-size:10px; color:#94a3b8;">
                     <label style="background:#1e293b; hover:background:#334155; color:#e2e8f0; border:1px solid #475569; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="画像を端末から選択して背景にセット">
                         <span>📷</span><span>画像セット</span>
@@ -194,12 +197,90 @@
     </div>
 </div>
 
+<!-- 🏆 レベル別得点 ＆ 目標ポイント設定モーダル -->
+<div id="pointsConfigModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:480px; width:100%; color:#f5f5f5; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7); font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
+        <div style="padding:14px 16px; border-bottom:1px solid #262626; display:flex; justify-content:space-between; align-items:center; background:#0a0a0a;">
+            <div style="font-weight:bold; font-size:14px; color:#fbbf24; display:flex; align-items:center; gap:6px;">
+                <span>🏆</span><span>レベル別得点 ＆ 目標ポイント設定</span>
+            </div>
+            <button onclick="closePointsModal()" style="background:none; border:none; color:#a3a3a3; font-size:16px; cursor:pointer; padding:4px;">✕</button>
+        </div>
+        <div style="padding:16px; max-height:75vh; overflow-y:auto; display:flex; flex-direction:column; gap:14px; font-size:12px;">
+            <!-- 目標ポイント -->
+            <div style="background:rgba(69,26,3,0.3); border:1px solid rgba(217,119,6,0.5); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px;">
+                <label style="font-weight:bold; color:#fcd34d; display:flex; justify-content:space-between;">
+                    <span>🏁 勝利目標ポイント (Target PTS)</span>
+                    <span id="modalTotalMapScore" style="color:#f59e0b; font-family:monospace; font-size:11px;"></span>
+                </label>
+                <div style="display:flex; align-items:center; gap:6px;">
+                    <input type="number" id="inputTargetScore" step="1000" min="0" style="flex:1; padding:6px 10px; background:#0a0a0a; border:1px solid #d97706; border-radius:6px; color:#fbbf24; font-family:monospace; font-weight:bold; font-size:15px;">
+                    <span style="color:#a3a3a3; font-weight:bold;">PTS</span>
+                </div>
+                <div style="display:flex; gap:6px;">
+                    <button type="button" onclick="setTargetPreset(30000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">3万</button>
+                    <button type="button" onclick="setTargetPreset(50000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">5万</button>
+                    <button type="button" onclick="setTargetPreset(80000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">8万</button>
+                    <button type="button" onclick="setTargetPreset(100000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">10万</button>
+                </div>
+            </div>
+
+            <!-- Lv別ポイント -->
+            <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <span style="font-weight:bold; color:#e5e5e5;">獲得ポイント (Lv.1〜7)</span>
+                    <div style="display:flex; gap:4px;">
+                        <button type="button" onclick="applyPointsPreset('standard')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#93c5fd; border-radius:4px; font-size:10px; cursor:pointer;">標準</button>
+                        <button type="button" onclick="applyPointsPreset('high_tier')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#d8b4fe; border-radius:4px; font-size:10px; cursor:pointer;">高Lv重視</button>
+                        <button type="button" onclick="applyPointsPreset('equal')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#cbd5e1; border-radius:4px; font-size:10px; cursor:pointer;">均等</button>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#f59e0b; color:black; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.7</span><span id="count-lv-7" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-7" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#db2777; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.6</span><span id="count-lv-6" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-6" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#db2777; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.5</span><span id="count-lv-5" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-5" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#2563eb; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.4</span><span id="count-lv-4" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-4" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#2563eb; color:white; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.3</span><span id="count-lv-3" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-3" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#334155; color:#cbd5e1; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.2</span><span id="count-lv-2" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-2" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                    <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px; grid-column:span 2;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#334155; color:#cbd5e1; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.1</span><span id="count-lv-1" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-1" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="padding:12px 16px; border-top:1px solid #262626; background:#0a0a0a; display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="closePointsModal()" style="padding:6px 14px; background:#262626; border:1px solid #404040; color:#d4d4d4; border-radius:6px; font-size:12px; cursor:pointer;">キャンセル</button>
+            <button type="button" onclick="savePointsConfig()" style="padding:6px 16px; background:#2563eb; border:1px solid #3b82f6; color:white; font-weight:bold; border-radius:6px; font-size:12px; cursor:pointer;">設定を保存して適用</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // -------------------------------------------------------------
     // マップ定義・同盟色設定
     // -------------------------------------------------------------
     let mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
-    const pointsConfig = {"1":100,"2":200,"3":600,"4":2000,"5":3000,"6":4000,"7":6000};
+    let pointsConfig = {"1":100,"2":200,"3":600,"4":2000,"5":3000,"6":4000,"7":6000};
+    let targetScore = 50000;
     const colorList = ["#e6194B","#3cb44b","#4363d8","#ffe119","#f58231","#911eb4","#38bdf8","#f032e6","#bfef45","#fabed4","#469990","#dcbeff","#9A6324","#800000","#aaffc3","#808000","#ffd8b1","#000075","#ff7b54","#0891b2","#d97706","#a9a9a9","#be123c","#145a32"];
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
 
@@ -287,7 +368,9 @@
         }
     }
 
-    // Flood Fill 塗りつぶし処理
+    // -------------------------------------------------------------
+    // 高速・安定・確実な六角形領地セル描画 (マス塗り)
+    // -------------------------------------------------------------
     function hexToRgb(hex) {
         const c = hex.replace('#', '');
         return {
@@ -297,105 +380,128 @@
         };
     }
 
-    function floodFill(targetCtx, startX, startY, rgb, radius) {
-        const w = 1200, h = 1200;
-        let cx = Math.max(0, Math.min(w - 1, Math.floor(startX)));
-        let cy = Math.max(0, Math.min(h - 1, Math.floor(startY)));
-
-        if (maskData) {
-            const sIdx = (cy * w + cx) * 4;
-            if (maskData[sIdx + 3] !== 0) {
-                let found = false;
-                for (let r = 1; r <= 35 && !found; r += 2) {
-                    for (let dx = -r; dx <= r && !found; dx += 2) {
-                        for (let dy = -r; dy <= r && !found; dy += 2) {
-                            const nx = cx + dx, ny = cy + dy;
-                            if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                                if (maskData[(ny * w + nx) * 4 + 3] === 0) {
-                                    cx = nx; cy = ny; found = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            const imgData = targetCtx.getImageData(0, 0, w, h);
-            const data = imgData.data;
-            const queue = [[cx, cy]];
-            const visited = new Uint8Array(w * h);
-            let filledCount = 0;
-            const maxPx = Math.floor(w * h * 0.15);
-
-            while (queue.length > 0 && filledCount < maxPx) {
-                const [x, y] = queue.pop();
-                const pos = y * w + x;
-                if (visited[pos]) continue;
-                visited[pos] = 1;
-
-                const i = pos * 4;
-                data[i] = rgb.r;
-                data[i+1] = rgb.g;
-                data[i+2] = rgb.b;
-                data[i+3] = 185;
-                filledCount++;
-
-                const neighbors = [[x+1, y], [x-1, y], [x, y+1], [x, y-1]];
-                for (const [nx, ny] of neighbors) {
-                    if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
-                        const nPos = ny * w + nx;
-                        if (!visited[nPos] && maskData[nPos * 4 + 3] === 0) {
-                            queue.push([nx, ny]);
-                        }
-                    }
-                }
-            }
-
-            targetCtx.putImageData(imgData, 0, 0);
-
-            if (filledCount < 90) {
-                targetCtx.save();
-                targetCtx.fillStyle = "rgb(" + rgb.r + "," + rgb.g + "," + rgb.b + ")";
-                targetCtx.globalAlpha = 0.75;
-                targetCtx.beginPath();
-                targetCtx.arc(startX, startY, radius, 0, Math.PI * 2);
-                targetCtx.fill();
-                targetCtx.restore();
-            }
-        } else {
-            // 画像なし・白紙時のヘックス領地塗り
-            targetCtx.save();
-            targetCtx.fillStyle = "rgb(" + rgb.r + "," + rgb.g + "," + rgb.b + ")";
-            targetCtx.globalAlpha = 0.72;
-            targetCtx.beginPath();
-            const sides = 6;
-            for (let s = 0; s < sides; s++) {
-                const angle = (s * 2 * Math.PI) / sides - Math.PI / 6;
-                const hx = startX + radius * Math.cos(angle);
-                const hy = startY + radius * Math.sin(angle);
-                if (s === 0) targetCtx.moveTo(hx, hy);
-                else targetCtx.lineTo(hx, hy);
-            }
-            targetCtx.closePath();
-            targetCtx.fill();
-            targetCtx.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.95)";
-            targetCtx.lineWidth = 3;
-            targetCtx.stroke();
-            targetCtx.restore();
+    function drawTerritoryCell(targetCtx, startX, startY, rgb, radius) {
+        targetCtx.save();
+        // 半透明の同盟鮮やかカラー塗り
+        targetCtx.fillStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.65)";
+        targetCtx.beginPath();
+        const sides = 6;
+        for (let s = 0; s < sides; s++) {
+            const angle = (s * 2 * Math.PI) / sides - Math.PI / 6;
+            const hx = startX + radius * Math.cos(angle);
+            const hy = startY + radius * Math.sin(angle);
+            if (s === 0) targetCtx.moveTo(hx, hy);
+            else targetCtx.lineTo(hx, hy);
         }
+        targetCtx.closePath();
+        targetCtx.fill();
+
+        // 鮮明な境界線
+        targetCtx.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.95)";
+        targetCtx.lineWidth = 2.5;
+        targetCtx.stroke();
+
+        // インナーハイライト
+        targetCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
+        targetCtx.lineWidth = 1;
+        targetCtx.stroke();
+        targetCtx.restore();
     }
 
     function redrawPaintLayer() {
         pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
         Object.entries(areaStatus).forEach(([key, color]) => {
-            const [kx, ky] = key.split('-').map(Number);
-            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
+            let pt = mapMasterData.find(p => (p.x + '-' + p.y) === key);
+            if (!pt) {
+                const parts = key.split('-');
+                if (parts.length >= 2) {
+                    const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
+                    pt = mapMasterData.find(p => Math.hypot(p.x - kx, p.y - ky) < 0.2);
+                }
+            }
             if (!pt) return;
             const px = pt.x * paintCanvas.width / 100, py = pt.y * paintCanvas.height / 100;
             const rgb = hexToRgb(color);
-            const radius = Math.max(26, Math.min(52, (pt.lv || 1) * 7 + 22));
-            floodFill(pCtx, px, py, rgb, radius);
+            const radius = Math.max(28, Math.min(50, (pt.lv || 1) * 3.5 + 25));
+            drawTerritoryCell(pCtx, px, py, rgb, radius);
         });
+    }
+
+    // -------------------------------------------------------------
+    // ポイント設定モーダル制御
+    // -------------------------------------------------------------
+    function openPointsModal() {
+        const modal = document.getElementById('pointsConfigModal');
+        if (!modal) return;
+        modal.style.display = 'flex';
+
+        // 目標ポイント
+        const inputTarget = document.getElementById('inputTargetScore');
+        if (inputTarget) inputTarget.value = targetScore || 50000;
+
+        // 総得点計算
+        let totalPts = 0;
+        mapMasterData.forEach(p => {
+            totalPts += (pointsConfig[p.lv] || 100);
+        });
+        const lblTotal = document.getElementById('modalTotalMapScore');
+        if (lblTotal) lblTotal.textContent = 'マップ総計: ' + totalPts.toLocaleString() + ' pts';
+
+        // Lv.1〜7のポイント入力 & マスカウント
+        for (let lv = 1; lv <= 7; lv++) {
+            const input = document.getElementById('input-pt-' + lv);
+            if (input) input.value = pointsConfig[lv] || 100;
+            const cntLbl = document.getElementById('count-lv-' + lv);
+            if (cntLbl) {
+                const count = mapMasterData.filter(p => p.lv === lv).length;
+                cntLbl.textContent = count + 'マス';
+            }
+        }
+    }
+
+    function closePointsModal() {
+        const modal = document.getElementById('pointsConfigModal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function setTargetPreset(val) {
+        const input = document.getElementById('inputTargetScore');
+        if (input) input.value = val;
+    }
+
+    function applyPointsPreset(type) {
+        let preset = {};
+        if (type === 'standard') {
+            preset = { 7: 6000, 6: 4000, 5: 3000, 4: 2000, 3: 600, 2: 200, 1: 100 };
+            setTargetPreset(50000);
+        } else if (type === 'high_tier') {
+            preset = { 7: 10000, 6: 7000, 5: 4500, 4: 2500, 3: 1000, 2: 300, 1: 100 };
+            setTargetPreset(80000);
+        } else if (type === 'equal') {
+            preset = { 7: 700, 6: 600, 5: 500, 4: 400, 3: 300, 2: 200, 1: 100 };
+            setTargetPreset(15000);
+        }
+        for (let lv = 1; lv <= 7; lv++) {
+            const input = document.getElementById('input-pt-' + lv);
+            if (input) input.value = preset[lv] || 100;
+        }
+    }
+
+    function savePointsConfig() {
+        const inputTarget = document.getElementById('inputTargetScore');
+        if (inputTarget) {
+            targetScore = Math.max(0, parseInt(inputTarget.value) || 50000);
+        }
+        for (let lv = 1; lv <= 7; lv++) {
+            const input = document.getElementById('input-pt-' + lv);
+            if (input) {
+                pointsConfig[lv] = Math.max(0, parseInt(input.value) || 0);
+            }
+        }
+        closePointsModal();
+        saveLocal();
+        updateBoard();
+        showStatus('マスの得点設定を保存・再計算しました！', 'success');
     }
 
     function initUI() {
@@ -642,11 +748,22 @@
     });
 
     function applyPaint(nearest) {
-        const key = nearest.x + '-' + nearest.y;
-        if (areaStatus[key] === selectedColor) {
-            delete areaStatus[key];
+        let targetKey = nearest.x + '-' + nearest.y;
+        for (const k in areaStatus) {
+            const parts = k.split('-');
+            if (parts.length >= 2) {
+                const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
+                if (Math.hypot(nearest.x - kx, nearest.y - ky) < 0.2) {
+                    targetKey = k;
+                    break;
+                }
+            }
+        }
+
+        if (areaStatus[targetKey] && areaStatus[targetKey].toLowerCase() === selectedColor.toLowerCase()) {
+            delete areaStatus[targetKey];
         } else {
-            areaStatus[key] = selectedColor;
+            areaStatus[targetKey] = selectedColor;
         }
         redrawPaintLayer();
         saveLocal();
@@ -851,8 +968,14 @@
         colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
         let totalOccupied = 0;
         Object.entries(areaStatus).forEach(([k, c]) => {
-            const [kx, ky] = k.split('-').map(Number);
-            const pt = mapMasterData.find(p => Math.abs(p.x - kx) < 0.05 && Math.abs(p.y - ky) < 0.05);
+            let pt = mapMasterData.find(p => (p.x + '-' + p.y) === k);
+            if (!pt) {
+                const parts = k.split('-');
+                if (parts.length >= 2) {
+                    const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
+                    pt = mapMasterData.find(p => Math.hypot(p.x - kx, p.y - ky) < 0.2);
+                }
+            }
             const pts = pointsConfig[pt ? pt.lv : 1] || 100;
             if (scores[c] !== undefined) {
                 scores[c] += pts;
@@ -874,10 +997,10 @@
         const container = document.getElementById('score-board');
         container.innerHTML = '';
 
-        // 全体制圧サマリー ＆ 使用中の色のみ表示バッジ
+        // 全体制圧サマリー ＆ 目標スコアバッジ
         const summaryHeader = document.createElement('div');
         summaryHeader.style.cssText = 'padding: 6px 4px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; margin-bottom: 6px;';
-        summaryHeader.innerHTML = '<span>占領中: <strong style="color:#fbbf24;">' + activeList.length + '</strong> 同盟 (' + totalOccupied + 'マス)</span><span style="font-size:10px; color:#34d399; background:rgba(5, 150, 105, 0.2); border:1px solid rgba(5, 150, 105, 0.4); padding:1px 5px; border-radius:4px;">使用色のみ表示</span>';
+        summaryHeader.innerHTML = '<span>占領中: <strong style="color:#fbbf24;">' + activeList.length + '</strong> 同盟 (' + totalOccupied + 'マス)</span><span style="font-size:10px; color:#fbbf24; background:rgba(217, 119, 6, 0.2); border:1px solid rgba(217, 119, 6, 0.4); padding:1px 5px; border-radius:4px; font-weight:bold;">目標: ' + (targetScore || 50000).toLocaleString() + 'pt</span>';
         container.appendChild(summaryHeader);
 
         if (activeList.length === 0) {
@@ -888,7 +1011,9 @@
             return;
         }
 
+        const tScore = targetScore || 50000;
         activeList.forEach((item, rank) => {
+            const pct = Math.min(100, Math.round((item.score / tScore) * 100));
             const card = document.createElement('div');
             card.className = 'score-card';
             card.style.borderLeftColor = item.hex;
@@ -899,9 +1024,14 @@
             card.onclick = () => updateSelectedColor(item.hex);
             card.innerHTML = 
                 '<div class="score-info">' +
-                    '<span style="color:#94a3b8; font-size:10px; margin-right:4px;">#' + (rank + 1) + '</span>' +
-                    '<span>' + item.name + '</span>' +
-                    '<div style="font-size:10px; color:#64748b; font-weight:normal;">占領: ' + item.count + 'マス</div>' +
+                    '<div style="display:flex; align-items:center; gap:4px;">' +
+                        '<span style="color:#94a3b8; font-size:10px; font-weight:bold;">#' + (rank + 1) + '</span>' +
+                        '<span>' + item.name + '</span>' +
+                    '</div>' +
+                    '<div style="font-size:10px; color:#64748b; font-weight:normal; display:flex; gap:6px; margin-top:2px;">' +
+                        '<span>' + item.count + 'マス</span>' +
+                        '<span style="color:#f59e0b;">' + pct + '%達成</span>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="score-val">' + item.score.toLocaleString() + '<span style="font-size:10px; color:#94a3b8; margin-left:2px;">pts</span></div>';
             container.appendChild(card);
@@ -1040,7 +1170,9 @@
             areaStatus: areaStatus,
             startPositions: startPositions,
             homePos: homePos,
-            territories: mapMasterData
+            territories: mapMasterData,
+            pointsConfig: pointsConfig,
+            targetScore: targetScore
         };
         localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
     }
@@ -1053,6 +1185,12 @@
                 areaStatus = parsed.areaStatus || {};
                 startPositions = parsed.startPositions || [];
                 homePos = parsed.homePos || null;
+                if (parsed.pointsConfig) {
+                    pointsConfig = parsed.pointsConfig;
+                }
+                if (parsed.targetScore) {
+                    targetScore = parsed.targetScore;
+                }
                 if (parsed.territories && parsed.territories.length > 0) {
                     mapMasterData = parsed.territories;
                     updateNodeCountLabel();
