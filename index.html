@@ -69,7 +69,7 @@
 <div class="main-wrapper">
     <div id="map-outer">
         <div id="map-container">
-            <img id="baseImg" src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
+            <img id="baseImg" crossorigin="anonymous" src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
             <canvas id="mapCanvas"></canvas>
         </div>
     </div>
@@ -356,8 +356,8 @@
 
             for (let i = 0; i < data.length; i += 4) {
                 const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
-                if (brightness < 85 && data[i+3] > 90) {
-                    data[i+3] = 255; // 壁
+                if (brightness < 100 && data[i+3] > 80) {
+                    data[i+3] = 255; // 壁（境界線）
                 } else {
                     data[i+3] = 0;   // 空間
                 }
@@ -369,7 +369,7 @@
     }
 
     // -------------------------------------------------------------
-    // 高速・安定・確実な六角形領地セル描画 (マス塗り)
+    // 本物のバケツ塗り（Flood Fill）: 画像の黒い境界線（壁）までピクセル単位で塗り広げる
     // -------------------------------------------------------------
     function hexToRgb(hex) {
         const c = hex.replace('#', '');
@@ -380,9 +380,80 @@
         };
     }
 
-    function drawTerritoryCell(targetCtx, startX, startY, rgb, radius) {
+    function floodFillCell(data, w, h, startX, startY, rgb, mask, maxRadius) {
+        let cx = Math.max(0, Math.min(w - 1, Math.floor(startX)));
+        let cy = Math.max(0, Math.min(h - 1, Math.floor(startY)));
+
+        // クリック位置が境界線上の場合、周囲の空きピクセルを始点に補正
+        const startPos = cy * w + cx;
+        if (mask[startPos * 4 + 3] !== 0) {
+            let found = false;
+            for (let r = 1; r <= 35 && !found; r += 2) {
+                for (let dx = -r; dx <= r && !found; dx += 2) {
+                    for (let dy = -r; dy <= r && !found; dy += 2) {
+                        const nx = cx + dx, ny = cy + dy;
+                        if (nx >= 0 && nx < w && ny >= 0 && ny < h) {
+                            if (mask[(ny * w + nx) * 4 + 3] === 0) {
+                                cx = nx; cy = ny; found = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        const queue = [cy * w + cx];
+        const visited = new Uint8Array(w * h);
+        visited[cy * w + cx] = 1;
+
+        const maxDistSq = maxRadius * maxRadius;
+        const alpha = 180;
+        let filledCount = 0;
+        const maxPixels = 16000;
+
+        let head = 0;
+        while (head < queue.length && filledCount < maxPixels) {
+            const pos = queue[head++];
+            const x = pos % w;
+            const y = Math.floor(pos / w);
+
+            const i = pos * 4;
+            data[i] = rgb.r;
+            data[i+1] = rgb.g;
+            data[i+2] = rgb.b;
+            data[i+3] = alpha;
+            filledCount++;
+
+            const neighbors = [
+                x > 0 ? pos - 1 : -1,
+                x < w - 1 ? pos + 1 : -1,
+                y > 0 ? pos - w : -1,
+                y < h - 1 ? pos + w : -1
+            ];
+
+            for (let n = 0; n < 4; n++) {
+                const nPos = neighbors[n];
+                if (nPos === -1 || visited[nPos]) continue;
+                visited[nPos] = 1;
+
+                // 壁（境界線）でストップ
+                if (mask[nPos * 4 + 3] !== 0) continue;
+
+                // 領域外への無限拡散を防ぐ
+                const nx = nPos % w;
+                const ny = Math.floor(nPos / w);
+                const distSq = (nx - startX) * (nx - startX) + (ny - startY) * (ny - startY);
+                if (distSq <= maxDistSq) {
+                    queue.push(nPos);
+                }
+            }
+        }
+
+        return filledCount;
+    }
+
+    function drawFallbackCell(targetCtx, startX, startY, rgb, radius) {
         targetCtx.save();
-        // 半透明の同盟鮮やかカラー塗り
         targetCtx.fillStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.65)";
         targetCtx.beginPath();
         const sides = 6;
@@ -395,36 +466,64 @@
         }
         targetCtx.closePath();
         targetCtx.fill();
-
-        // 鮮明な境界線
         targetCtx.strokeStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.95)";
         targetCtx.lineWidth = 2.5;
-        targetCtx.stroke();
-
-        // インナーハイライト
-        targetCtx.strokeStyle = "rgba(255, 255, 255, 0.45)";
-        targetCtx.lineWidth = 1;
         targetCtx.stroke();
         targetCtx.restore();
     }
 
     function redrawPaintLayer() {
         pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-        Object.entries(areaStatus).forEach(([key, color]) => {
-            let pt = mapMasterData.find(p => (p.x + '-' + p.y) === key);
-            if (!pt) {
-                const parts = key.split('-');
-                if (parts.length >= 2) {
-                    const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
-                    pt = mapMasterData.find(p => Math.hypot(p.x - kx, p.y - ky) < 0.2);
+        const w = paintCanvas.width, h = paintCanvas.height;
+
+        if (maskData) {
+            // 本物のバケツ塗り（Flood Fill）
+            const imgData = pCtx.createImageData(w, h);
+            const data = imgData.data;
+
+            Object.entries(areaStatus).forEach(([key, color]) => {
+                let pt = mapMasterData.find(p => (p.x + '-' + p.y) === key);
+                if (!pt) {
+                    const parts = key.split('-');
+                    if (parts.length >= 2) {
+                        const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
+                        pt = mapMasterData.find(p => Math.hypot(p.x - kx, p.y - ky) < 0.2);
+                    }
                 }
-            }
-            if (!pt) return;
-            const px = pt.x * paintCanvas.width / 100, py = pt.y * paintCanvas.height / 100;
-            const rgb = hexToRgb(color);
-            const radius = Math.max(28, Math.min(50, (pt.lv || 1) * 3.5 + 25));
-            drawTerritoryCell(pCtx, px, py, rgb, radius);
-        });
+                if (!pt) return;
+                const px = pt.x * w / 100, py = pt.y * h / 100;
+                const rgb = hexToRgb(color);
+                const maxRadius = Math.max(38, Math.min(75, (pt.lv || 1) * 3 + 36));
+                const filled = floodFillCell(data, w, h, px, py, rgb, maskData, maxRadius);
+                if (filled < 50) {
+                    pCtx.save();
+                    pCtx.fillStyle = "rgba(" + rgb.r + "," + rgb.g + "," + rgb.b + ", 0.7)";
+                    pCtx.beginPath();
+                    pCtx.arc(px, py, 26, 0, Math.PI * 2);
+                    pCtx.fill();
+                    pCtx.restore();
+                }
+            });
+
+            pCtx.putImageData(imgData, 0, 0);
+        } else {
+            // 白紙・画像なし時のフォールバック
+            Object.entries(areaStatus).forEach(([key, color]) => {
+                let pt = mapMasterData.find(p => (p.x + '-' + p.y) === key);
+                if (!pt) {
+                    const parts = key.split('-');
+                    if (parts.length >= 2) {
+                        const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
+                        pt = mapMasterData.find(p => Math.hypot(p.x - kx, p.y - ky) < 0.2);
+                    }
+                }
+                if (!pt) return;
+                const px = pt.x * w / 100, py = pt.y * h / 100;
+                const rgb = hexToRgb(color);
+                const radius = Math.max(28, Math.min(50, (pt.lv || 1) * 3.5 + 25));
+                drawFallbackCell(pCtx, px, py, rgb, radius);
+            });
+        }
     }
 
     // -------------------------------------------------------------
