@@ -135,10 +135,12 @@
                     <button class="lv-btn" onclick="setPlacementLevel(7)" id="btn-lv-7">Lv7</button>
                 </div>
                 <div class="action-chip-row">
+                    <button class="action-chip" onclick="setupNewMapPrompt()" style="color:#60a5fa;" title="新しいマップを作成・画像と座標を初期化">➕ 新規マップ設定</button>
                     <button class="action-chip" onclick="copyCoordinatesJson()" title="現在のマス座標配列をJSON形式でコピー">📋 座標JSONコピー</button>
                     <button class="action-chip" onclick="importCoordinatesPrompt()" title="座標JSONを貼り付けてインポート">📥 JSON読込</button>
                     <button class="action-chip" onclick="restoreDefault160()" title="160マスの標準座標を復元">🔄 160マス復元</button>
-                    <button class="action-chip" onclick="clearAllNodes()" style="color:#f87171;" title="全マス座標をクリア">🗑️ 全消去</button>
+                    <button class="action-chip" onclick="clearAllNodes()" style="color:#fca5a5;" title="全マス座標のみをクリア">マス座標消去</button>
+                    <button class="action-chip" onclick="clearAllMapAndNodes()" style="color:#f87171; font-weight:bold; background:#450a0a; border-color:#991b1b;" title="マップ画像と全マス座標の両方を消去して完全白紙にする">🗑️ マップと座標の両方を全部消す</button>
                 </div>
             </div>
 
@@ -747,6 +749,56 @@
             render();
             updateBoard();
             showStatus('全マス座標をクリアしました。マップ上をクリックして新規座標を配置してください。', 'success');
+        }
+    }
+
+    function clearAllMapAndNodes() {
+        if (confirm('マップ画像とすべてのマス座標の両方を消去して完全な白紙にしますか？')) {
+            mapMasterData = [];
+            areaStatus = {};
+            startPositions = [];
+            homePos = null;
+            selectedNodeIndex = null;
+            const base = document.getElementById('baseImg');
+            if (base) {
+                base.src = '';
+                base.style.display = 'none';
+            }
+            updateNodeCountLabel();
+            redrawPaintLayer();
+            render();
+            updateBoard();
+            saveLocal();
+            showStatus('マップ画像と全マス座標の両方を消去しました。', 'success');
+        }
+    }
+
+    function setupNewMapPrompt() {
+        const name = prompt('新しいマップ名を入力してください:', '新規マップ');
+        if (!name) return;
+        const imgUrl = prompt('マップ背景画像のURLを入力してください（空欄で白紙マップ）:', '');
+        if (imgUrl !== null) {
+            const base = document.getElementById('baseImg');
+            if (base) {
+                if (imgUrl.trim()) {
+                    base.src = imgUrl.trim();
+                    base.style.display = 'block';
+                } else {
+                    base.src = '';
+                    base.style.display = 'none';
+                }
+            }
+            mapMasterData = [];
+            areaStatus = {};
+            startPositions = [];
+            homePos = null;
+            selectedNodeIndex = null;
+            updateNodeCountLabel();
+            redrawPaintLayer();
+            render();
+            updateBoard();
+            saveLocal();
+            showStatus('新しいマップ「' + name + '」を設定しました！座標をプロットしてください。', 'success');
         }
     }
 
