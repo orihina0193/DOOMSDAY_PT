@@ -193,79 +193,8 @@
         </div>
 
         <div class="gas-config-bar">
-            <span>☁️ GASクラウド連携: 有効</span>
-            <div style="display:flex; gap:8px;">
-                <a href="javascript:void(0)" onclick="showGasScriptGuide()">📋 GASコード確認</a>
-                <a href="javascript:void(0)" onclick="promptChangeGasUrl()">⚙️ URL変更</a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- 📋 GASスクリプトコード確認モーダル -->
-<div id="gasScriptModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:16px;">
-    <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:540px; width:100%; color:#f5f5f5; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7); font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
-        <div style="padding:14px 16px; border-bottom:1px solid #262626; display:flex; justify-content:space-between; align-items:center; background:#0a0a0a;">
-            <div style="font-weight:bold; font-size:14px; display:flex; align-items:center; gap:6px;">
-                <span>📋</span><span>Google Apps Script (コード.gs)</span>
-            </div>
-            <button onclick="closeGasScriptModal()" style="background:transparent; border:none; color:#a3a3a3; cursor:pointer; font-size:18px; padding:2px 6px;">✕</button>
-        </div>
-        <div style="padding:16px; font-size:12px; line-height:1.6; max-height:75vh; overflow-y:auto;">
-            <div style="background:#0c4a6e; border:1px solid #0284c7; color:#e0f2fe; padding:10px 12px; border-radius:6px; margin-bottom:12px; font-size:11px;">
-                <strong>💡 承認不要・誰でも保存できる完全オープンスクリプトです</strong><br>
-                スプレッドシートの「拡張機能」>「Apps Script」にこのコードを貼り付け、「デプロイ」>「新バージョンでデプロイ」を実行するだけで、どの部屋名でも無制限に保存・読み出しできるようになります。
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:bold; color:#cbd5e1;">スクリプトコード</span>
-                <button onclick="copyGasScriptCode()" style="background:#2563eb; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; font-weight:bold; cursor:pointer;">コードをコピー</button>
-            </div>
-            <pre id="gasScriptCodeBlock" style="background:#0a0a0a; border:1px solid #334155; padding:10px; border-radius:6px; font-size:11px; font-family:monospace; color:#38bdf8; overflow-x:auto; max-height:220px;">function doGet(e) {
-  var room = (e && e.parameter && e.parameter.room) ? e.parameter.room : 'main';
-  var sheet = getOrCreateSheet();
-  var data = sheet.getDataRange().getValues();
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(room)) {
-      return ContentService.createTextOutput(String(data[i][1])).setMimeType(ContentService.MimeType.TEXT);
-    }
-  }
-  return ContentService.createTextOutput("").setMimeType(ContentService.MimeType.TEXT);
-}
-
-function doPost(e) {
-  var contents = (e && e.postData && e.postData.contents) ? e.postData.contents : "";
-  var json = {};
-  try { json = JSON.parse(contents); } catch(err) {
-    return ContentService.createTextOutput("JSON parse error").setMimeType(ContentService.MimeType.TEXT);
-  }
-  var room = json.room || json.roomId || 'main';
-  var str = json.str || '';
-  var sheet = getOrCreateSheet();
-  var data = sheet.getDataRange().getValues();
-  var found = false;
-  for (var i = 1; i < data.length; i++) {
-    if (String(data[i][0]) === String(room)) {
-      sheet.getRange(i + 1, 2).setValue(str);
-      sheet.getRange(i + 1, 3).setValue(new Date());
-      found = true;
-      break;
-    }
-  }
-  if (!found) {
-    sheet.appendRow([String(room), str, new Date()]);
-  }
-  return ContentService.createTextOutput("OK").setMimeType(ContentService.MimeType.TEXT);
-}
-
-function getOrCreateSheet() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("rooms");
-  if (!sheet) {
-    sheet = ss.insertSheet("rooms");
-    sheet.appendRow(["Room", "Data", "UpdatedAt"]);
-  }
-  return sheet;
-}</pre>
+            <span>☁️ GAS保存連携: 有効</span>
+            <a href="javascript:void(0)" onclick="promptChangeGasUrl()">⚙️ GAS URL変更</a>
         </div>
     </div>
 </div>
@@ -608,29 +537,6 @@ function getOrCreateSheet() {
         updateSelectedColor(colorList[0]);
         updateNodeCountLabel();
         loadLocal();
-
-        // 共有URLパラメータ (?v=... または ?v3=...) からの即時復元
-        try {
-            const params = new URLSearchParams(window.location.search);
-            const vParam = params.get('v') || params.get('v3');
-            if (vParam) {
-                let parsed = null;
-                try {
-                    const decomp = (window.LZString && (window.LZString.decompressFromEncodedURIComponent(vParam) || window.LZString.decompress(vParam)));
-                    if (decomp) parsed = JSON.parse(decomp);
-                } catch(e) {}
-                if (parsed) {
-                    if (parsed.areaStatus) areaStatus = parsed.areaStatus;
-                    if (parsed.startPositions) startPositions = parsed.startPositions;
-                    if (parsed.homePos !== undefined) homePos = parsed.homePos;
-                    if (parsed.pointsConfig) pointsConfig = parsed.pointsConfig;
-                    if (parsed.targetScore) targetScore = parsed.targetScore;
-                    saveLocal();
-                    showStatus('共有URLから盤面状態を展開しました！', 'success');
-                }
-            }
-        } catch (e) {}
-
         updateBoard();
         redrawPaintLayer();
         render();
@@ -1208,6 +1114,18 @@ function getOrCreateSheet() {
                 })
             });
 
+            // デフォルトGASスクリプトの場合、念のためバックグラウンドで自動登録リクエストも発信
+            if (gasUrl.includes('AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r')) {
+                try {
+                    fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'request', room: currentRoom })
+                    });
+                } catch (e) {}
+            }
+
             showStatus('部屋「' + currentRoom + '」の作戦データを保存しました！（ローカル＆GAS同期）', 'success');
         } catch (err) {
             console.error('GAS save error:', err);
@@ -1233,11 +1151,7 @@ function getOrCreateSheet() {
 
             if (!text || text === 'NOT_APPROVED' || text === 'PENDING') {
                 if (isManual) {
-                    if (text === 'NOT_APPROVED' || text === 'PENDING') {
-                        showStatus('⚠️ GAS側で承認制限スクリプトが動作しています。下部の「📋 GASコード確認」から制限なしコードに更新してください。', 'warning');
-                    } else {
-                        showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
-                    }
+                    showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
                 }
                 loadLocal();
                 redrawPaintLayer();
@@ -1330,50 +1244,12 @@ function getOrCreateSheet() {
     }
 
     function copyRoomLink() {
-        saveLocal();
-        const statePayload = {
-            areaStatus: areaStatus,
-            startPositions: startPositions,
-            homePos: homePos,
-            pointsConfig: pointsConfig,
-            targetScore: targetScore,
-            updatedAt: new Date().toISOString()
-        };
-        let compressedStr = '';
-        try {
-            if (window.LZString && typeof window.LZString.compressToEncodedURIComponent === 'function') {
-                compressedStr = window.LZString.compressToEncodedURIComponent(JSON.stringify(statePayload));
-            }
-        } catch (e) {}
-
         const url = new URL(window.location.href);
-        url.searchParams.set('room', currentRoom || 'main');
-        if (compressedStr) {
-            url.searchParams.set('v', compressedStr);
-        }
+        url.searchParams.set('room', currentRoom);
         navigator.clipboard.writeText(url.toString()).then(() => {
             showStatus('部屋「' + currentRoom + '」の共有URLをコピーしました！', 'success');
         }).catch(() => {
             prompt('共有リンク:', url.toString());
-        });
-    }
-
-    function showGasScriptGuide() {
-        const modal = document.getElementById('gasScriptModal');
-        if (modal) modal.style.display = 'flex';
-    }
-
-    function closeGasScriptModal() {
-        const modal = document.getElementById('gasScriptModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function copyGasScriptCode() {
-        const code = document.getElementById('gasScriptCodeBlock').textContent;
-        navigator.clipboard.writeText(code).then(() => {
-            alert('GASコードをクリップボードにコピーしました！\\nGoogle スプレッドシートの「拡張機能」>「Apps Script」に貼り付けて新バージョンでデプロイしてください。');
-        }).catch(() => {
-            prompt('GASスクリプトコード:', code);
         });
     }
 
