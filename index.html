@@ -1092,7 +1092,7 @@
         }
 
         try {
-            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY + '&_t=' + Date.now();
+           const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY;
             const res = await fetch(docUrl);
             if (res.status === 404) {
                 if (isManual) {
