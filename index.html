@@ -1102,24 +1102,20 @@
             compressedStr = encodeURIComponent(JSON.stringify(fullData));
         }
 
-        const payload = {
-            room: currentRoom,
-            roomId: currentRoom,
-            str: compressedStr,
-            data: fullData
-        };
-
         try {
-            // text/plain;charset=utf-8 は CORS preflight を起こさず確実にGASに届く
             await fetch(gasUrl, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    room: currentRoom,
+                    str: compressedStr,
+                    data: fullData
+                })
             });
 
-            // デフォルトGASの場合、未承認部屋は自動申請も送信
-            if (currentRoom !== 'test' && gasUrl.includes('AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r')) {
+            // デフォルトGASスクリプトの場合、念のためバックグラウンドで自動登録リクエストも発信
+            if (gasUrl.includes('AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r')) {
                 try {
                     fetch(gasUrl, {
                         method: 'POST',
@@ -1154,29 +1150,13 @@
             const text = (await res.text()).trim();
 
             if (!text || text === 'NOT_APPROVED' || text === 'PENDING') {
-                // クラウド承認待ちまたは未作成の場合、ローカル保存データを復元
-                const hasLocal = localStorage.getItem('territory_save_room_' + currentRoom);
-                if (hasLocal) {
-                    loadLocal();
-                    redrawPaintLayer();
-                    updateBoard();
-                    render();
-                    if (isManual) {
-                        if (text === 'PENDING' || text === 'NOT_APPROVED') {
-                            showStatus('部屋「' + currentRoom + '」はクラウド承認待ちのため、保存済ローカルデータを復元しました（「test」部屋または独自GASで即時共有可能）', 'warning');
-                        } else {
-                            showStatus('クラウドデータ未作成のため、保存済ローカル作戦を復元しました', 'success');
-                        }
-                    }
-                    return;
-                }
                 if (isManual) {
-                    if (text === 'PENDING' || text === 'NOT_APPROVED') {
-                        showStatus('部屋「' + currentRoom + '」はクラウド承認待ちです（承認済の「test」部屋または独自GASで即時共有できます）', 'warning');
-                    } else {
-                        showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
-                    }
+                    showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
                 }
+                loadLocal();
+                redrawPaintLayer();
+                updateBoard();
+                render();
                 return;
             }
 
