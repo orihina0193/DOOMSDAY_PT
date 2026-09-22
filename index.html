@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>陣取り戦場マップ (標準160マス・img/image.png) - 領地戦作戦シミュレーター</title>
+    <!-- LZString for GAS high-speed compressed storage -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
     <style>
         :root { --panel-width: 340px; }
         * { box-sizing: border-box; }
@@ -388,10 +390,12 @@
             pCtx.fill();
         } else {
             pCtx.globalCompositeOperation = 'source-over';
+            pCtx.globalAlpha = 0.58; // 透過度を上げてマップの数字が見えるように調整
             pCtx.fillStyle = color;
             pCtx.beginPath();
             pCtx.arc(px, py, 26, 0, Math.PI * 2);
             pCtx.fill();
+            pCtx.globalAlpha = 1.0;
         }
         pCtx.restore();
     }
@@ -420,7 +424,7 @@
                 pData[idx] = targetRgb.r;
                 pData[idx+1] = targetRgb.g;
                 pData[idx+2] = targetRgb.b;
-                pData[idx+3] = 235;
+                pData[idx+3] = 145; // 透過度を高めて(約57%)、マップ上の数字・文字が透けて見えるように調整
             }
 
             stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
@@ -1068,35 +1072,70 @@
         }
 
         const btn = document.getElementById('btnSaveGas');
-        btn.disabled = true;
+        if (btn) btn.disabled = true;
         showStatus('GASに部屋「' + currentRoom + '」を保存中...', 'loading');
+
+        const fullData = {
+            roomName: currentRoom,
+            room: currentRoom,
+            roomId: currentRoom,
+            updatedAt: new Date().toISOString(),
+            areaStatus: areaStatus,
+            startPositions: startPositions,
+            homePos: homePos,
+            territories: mapMasterData,
+            pointsConfig: pointsConfig,
+            targetScore: targetScore
+        };
+
+        // 端末ローカルにも確実に即時保存
+        saveLocal();
+
+        let compressedStr = '';
+        try {
+            if (window.LZString && typeof window.LZString.compressToEncodedURIComponent === 'function') {
+                compressedStr = window.LZString.compressToEncodedURIComponent(JSON.stringify(fullData));
+            } else {
+                compressedStr = encodeURIComponent(JSON.stringify(fullData));
+            }
+        } catch (e) {
+            compressedStr = encodeURIComponent(JSON.stringify(fullData));
+        }
 
         const payload = {
             room: currentRoom,
-            data: {
-                roomName: currentRoom,
-                updatedAt: new Date().toISOString(),
-                areaStatus: areaStatus,
-                startPositions: startPositions,
-                homePos: homePos,
-                territories: mapMasterData
-            }
+            roomId: currentRoom,
+            str: compressedStr,
+            data: fullData
         };
 
         try {
+            // text/plain;charset=utf-8 は CORS preflight を起こさず確実にGASに届く
             await fetch(gasUrl, {
                 method: 'POST',
                 mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify(payload)
             });
 
-            saveLocal();
-            showStatus('部屋「' + currentRoom + '」の作戦データを保存しました！', 'success');
+            // デフォルトGASの場合、未承認部屋は自動申請も送信
+            if (currentRoom !== 'test' && gasUrl.includes('AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r')) {
+                try {
+                    fetch(gasUrl, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'request', room: currentRoom })
+                    });
+                } catch (e) {}
+            }
+
+            showStatus('部屋「' + currentRoom + '」の作戦データを保存しました！（ローカル＆GAS同期）', 'success');
         } catch (err) {
-            showStatus('保存に失敗しました: ' + err.message, 'error');
+            console.error('GAS save error:', err);
+            showStatus('ローカルに保存完了（GAS通信エラー: ' + (err.message || 'ネットワーク') + '）', 'warning');
         } finally {
-            btn.disabled = false;
+            if (btn) btn.disabled = false;
         }
     }
 
@@ -1105,18 +1144,74 @@
 
         const btn = document.getElementById('btnFetchGas');
         if (btn) btn.disabled = true;
-        showStatus('部屋「' + currentRoom + '」をGASから同期中...', 'loading');
+        if (isManual) {
+            showStatus('部屋「' + currentRoom + '」をGASから同期中...', 'loading');
+        }
 
         try {
             const fetchUrl = gasUrl + (gasUrl.includes('?') ? '&' : '?') + 'room=' + encodeURIComponent(currentRoom) + '&_t=' + Date.now();
             const res = await fetch(fetchUrl);
-            const json = await res.json();
+            const text = (await res.text()).trim();
 
-            if (json && json.success && json.data) {
-                const data = json.data;
+            if (!text || text === 'NOT_APPROVED' || text === 'PENDING') {
+                // クラウド承認待ちまたは未作成の場合、ローカル保存データを復元
+                const hasLocal = localStorage.getItem('territory_save_room_' + currentRoom);
+                if (hasLocal) {
+                    loadLocal();
+                    redrawPaintLayer();
+                    updateBoard();
+                    render();
+                    if (isManual) {
+                        if (text === 'PENDING' || text === 'NOT_APPROVED') {
+                            showStatus('部屋「' + currentRoom + '」はクラウド承認待ちのため、保存済ローカルデータを復元しました（「test」部屋または独自GASで即時共有可能）', 'warning');
+                        } else {
+                            showStatus('クラウドデータ未作成のため、保存済ローカル作戦を復元しました', 'success');
+                        }
+                    }
+                    return;
+                }
+                if (isManual) {
+                    if (text === 'PENDING' || text === 'NOT_APPROVED') {
+                        showStatus('部屋「' + currentRoom + '」はクラウド承認待ちです（承認済の「test」部屋または独自GASで即時共有できます）', 'warning');
+                    } else {
+                        showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
+                    }
+                }
+                return;
+            }
+
+            let data = null;
+
+            // 1. LZString 解凍
+            try {
+                if (window.LZString) {
+                    const dec = window.LZString.decompressFromEncodedURIComponent(text) || window.LZString.decompress(text);
+                    if (dec) data = JSON.parse(dec);
+                }
+            } catch (e) {}
+
+            // 2. URIデコード
+            if (!data) {
+                try {
+                    const dec = decodeURIComponent(text);
+                    if (dec && dec.startsWith('{')) data = JSON.parse(dec);
+                } catch (e) {}
+            }
+
+            // 3. 通常JSONパース
+            if (!data) {
+                try {
+                    const parsed = JSON.parse(text);
+                    data = parsed.data || parsed;
+                } catch (e) {}
+            }
+
+            if (data) {
                 if (data.areaStatus) areaStatus = data.areaStatus;
                 if (data.startPositions) startPositions = data.startPositions;
                 if (data.homePos !== undefined) homePos = data.homePos;
+                if (data.pointsConfig) pointsConfig = data.pointsConfig;
+                if (data.targetScore) targetScore = data.targetScore;
                 if (data.territories && Array.isArray(data.territories) && data.territories.length > 0) {
                     mapMasterData = data.territories;
                     updateNodeCountLabel();
@@ -1126,15 +1221,24 @@
                 redrawPaintLayer();
                 updateBoard();
                 render();
-                showStatus('部屋「' + currentRoom + '」の最新作戦データを取得しました！', 'success');
+                showStatus('部屋「' + currentRoom + '」の最新データをGASから取得・同期しました！', 'success');
             } else if (isManual) {
-                showStatus('部屋「' + currentRoom + '」の保存データはまだありません。', 'success');
-            } else {
-                document.getElementById('statusMessage').style.display = 'none';
+                showStatus('部屋「' + currentRoom + '」のデータ解凍・解析に失敗しました', 'error');
             }
         } catch (err) {
-            if (isManual) {
-                showStatus('最新取得に失敗しました (通信環境またはCORS)', 'error');
+            console.error('GAS load error:', err);
+            // 通信エラー時もローカルデータがあれば復元
+            const hasLocal = localStorage.getItem('territory_save_room_' + currentRoom);
+            if (hasLocal) {
+                loadLocal();
+                redrawPaintLayer();
+                updateBoard();
+                render();
+                if (isManual) {
+                    showStatus('通信エラーのためローカル保存データを復元しました', 'warning');
+                }
+            } else if (isManual) {
+                showStatus('最新取得に失敗しました: ' + (err.message || '通信環境エラー'), 'error');
             }
         } finally {
             if (btn) btn.disabled = false;
