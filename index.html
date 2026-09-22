@@ -286,7 +286,7 @@
     const colorList = ["#e6194B","#3cb44b","#4363d8","#ffe119","#f58231","#911eb4","#38bdf8","#f032e6","#bfef45","#fabed4","#469990","#dcbeff","#9A6324","#800000","#aaffc3","#808000","#ffd8b1","#000075","#ff7b54","#0891b2","#d97706","#a9a9a9","#be123c","#145a32"];
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
 
-    let DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r/exec";
+    let DEFAULT_GAS_URL = "https://script.google.com/macros/s/AKfycbymqaSGq9SCxEFsevJYGgoWL48fqifHYjPCRUku3XZpAmKkke4gpI9jNiZfyW-QM2YP/exec";
     let gasUrl = localStorage.getItem('territory_custom_gas_url') || DEFAULT_GAS_URL;
 
     // -------------------------------------------------------------
@@ -390,12 +390,10 @@
             pCtx.fill();
         } else {
             pCtx.globalCompositeOperation = 'source-over';
-            pCtx.globalAlpha = 0.58; // 透過度を上げてマップの数字が見えるように調整
             pCtx.fillStyle = color;
             pCtx.beginPath();
             pCtx.arc(px, py, 26, 0, Math.PI * 2);
             pCtx.fill();
-            pCtx.globalAlpha = 1.0;
         }
         pCtx.restore();
     }
@@ -424,7 +422,7 @@
                 pData[idx] = targetRgb.r;
                 pData[idx+1] = targetRgb.g;
                 pData[idx+2] = targetRgb.b;
-                pData[idx+3] = 145; // 透過度を高めて(約57%)、マップ上の数字・文字が透けて見えるように調整
+                pData[idx+3] = 235;
             }
 
             stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
@@ -1088,7 +1086,6 @@
             targetScore: targetScore
         };
 
-        // 端末ローカルにも確実に即時保存
         saveLocal();
 
         let compressedStr = '';
@@ -1114,22 +1111,9 @@
                 })
             });
 
-            // デフォルトGASスクリプトの場合、念のためバックグラウンドで自動登録リクエストも発信
-            if (gasUrl.includes('AKfycbzOlelOcP6d8bILIhHNz4bUsnCv34o2b3RcwZSQLi2bBb1P3aKaxGVXqxFzqTMSpL0r')) {
-                try {
-                    fetch(gasUrl, {
-                        method: 'POST',
-                        mode: 'no-cors',
-                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                        body: JSON.stringify({ action: 'request', room: currentRoom })
-                    });
-                } catch (e) {}
-            }
-
             showStatus('部屋「' + currentRoom + '」の作戦データを保存しました！（ローカル＆GAS同期）', 'success');
         } catch (err) {
-            console.error('GAS save error:', err);
-            showStatus('ローカルに保存完了（GAS通信エラー: ' + (err.message || 'ネットワーク') + '）', 'warning');
+            showStatus('ローカルに保存完了（通信エラー: ' + (err.message || 'ネットワーク') + '）', 'warning');
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -1149,7 +1133,7 @@
             const res = await fetch(fetchUrl);
             const text = (await res.text()).trim();
 
-            if (!text || text === 'NOT_APPROVED' || text === 'PENDING') {
+            if (!text || text === 'NOT_APPROVED' || text === 'PENDING' || text === 'null' || text === 'undefined') {
                 if (isManual) {
                     showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
                 }
@@ -1203,22 +1187,15 @@
                 render();
                 showStatus('部屋「' + currentRoom + '」の最新データをGASから取得・同期しました！', 'success');
             } else if (isManual) {
-                showStatus('部屋「' + currentRoom + '」のデータ解凍・解析に失敗しました', 'error');
+                showStatus('部屋「' + currentRoom + '」のデータ解凍に失敗しました', 'error');
             }
         } catch (err) {
-            console.error('GAS load error:', err);
-            // 通信エラー時もローカルデータがあれば復元
-            const hasLocal = localStorage.getItem('territory_save_room_' + currentRoom);
-            if (hasLocal) {
-                loadLocal();
-                redrawPaintLayer();
-                updateBoard();
-                render();
-                if (isManual) {
-                    showStatus('通信エラーのためローカル保存データを復元しました', 'warning');
-                }
-            } else if (isManual) {
-                showStatus('最新取得に失敗しました: ' + (err.message || '通信環境エラー'), 'error');
+            loadLocal();
+            redrawPaintLayer();
+            updateBoard();
+            render();
+            if (isManual) {
+                showStatus('GAS通信に失敗したため、ローカル保存データを復元しました', 'warning');
             }
         } finally {
             if (btn) btn.disabled = false;
