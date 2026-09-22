@@ -1026,8 +1026,10 @@
     }
 
     // -------------------------------------------------------------
-    // 🌟 Firebase クラウド同期 (Google Firestore 直接通信)
+    // 🌟 Firebase クラウド同期 (APIキー認証付き・完全直結)
     // -------------------------------------------------------------
+    const FIREBASE_API_KEY = "AIzaSyCXjs2UBKXildGnrA8BMV3UO6HdKK-LnKg";
+
     async function saveToCloud() {
         const btn = document.getElementById('btnSaveCloud');
         if (btn) btn.disabled = true;
@@ -1060,7 +1062,7 @@
         }
 
         try {
-            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom);
+            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY;
             const res = await fetch(docUrl, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
@@ -1090,7 +1092,7 @@
         }
 
         try {
-            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?_t=' + Date.now();
+            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY + '&_t=' + Date.now();
             const res = await fetch(docUrl);
             if (res.status === 404) {
                 if (isManual) {
@@ -1156,7 +1158,9 @@
                 redrawPaintLayer();
                 updateBoard();
                 render();
-                showStatus('部屋「' + currentRoom + '」の最新データをクラウドから同期しました！', 'success');
+                if (isManual) {
+                    showStatus('部屋「' + currentRoom + '」の最新データをクラウドから同期しました！', 'success');
+                }
             } else if (isManual) {
                 showStatus('部屋「' + currentRoom + '」のデータ解凍に失敗しました', 'error');
             }
