@@ -70,7 +70,7 @@
 <div class="main-wrapper">
     <div id="map-outer">
         <div id="map-container">
-            <img id="baseImg" crossorigin="anonymous" src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
+            <img id="baseImg" crossorigin="anonymous" data-default-src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
             <canvas id="mapCanvas"></canvas>
         </div>
     </div>
@@ -338,11 +338,39 @@
     }
 
     function handleImageError(img) {
+        // 保存されていたカスタム画像(customMapImage)の読み込みに失敗した場合、
+        // 画面が真っ黒のままになってしまわないよう、デフォルトマップに自動で戻す。
+        if (customMapImage) {
+            console.warn('カスタムマップ画像の読み込みに失敗したため、デフォルト画像にフォールバックします。');
+            customMapImage = null;
+            saveLocal();
+            applyMapImageSrc();
+            showStatus('保存されていたマップ画像の読み込みに失敗したため、デフォルトのマップに戻しました。', 'warning');
+            return;
+        }
         img.style.display = 'none';
         isImageLoaded = false;
         maskData = null;
         redrawPaintLayer();
         render();
+    }
+
+    // マップ背景画像のsrcをここで一元的に設定する。
+    // 以前はHTML側に固定で src="img/image.png" が書かれており、ページ読込時に
+    // その画像取得(404になりがち)が先に走った直後、JS側でカスタム画像に
+    // 差し替える処理が続けて動くと、"古い読み込み失敗イベント"が新しいsrcに
+    // 対して誤発火し、画像が真っ黒のまま消えてしまう競合が起きていた。
+    // 画像の読み込み開始をここ1箇所からしか行わないようにして、その競合を無くす。
+    function applyMapImageSrc() {
+        const base = document.getElementById('baseImg');
+        if (!base) return;
+        if (customMapImage) {
+            base.src = customMapImage;
+            base.style.display = 'block';
+        } else {
+            base.src = base.dataset.defaultSrc || 'img/image.png';
+            base.style.display = 'block';
+        }
     }
 
     function setupFromBase(img) {
@@ -593,12 +621,8 @@
         const reader = new FileReader();
         reader.onload = (e) => {
             resizeImageDataUrl(e.target.result, 1400, 0.75).then((finalDataUrl) => {
-                const base = document.getElementById('baseImg');
-                if (base) {
-                    base.src = finalDataUrl;
-                    base.style.display = 'block';
-                }
                 customMapImage = finalDataUrl;
+                applyMapImageSrc();
                 saveLocal();
                 const approxKB = Math.round(finalDataUrl.length / 1024);
                 if (finalDataUrl.length > 900000) {
@@ -1215,17 +1239,8 @@
                 // 画像だけ他端末に共有されないバグの原因だった。
                 if (Object.prototype.hasOwnProperty.call(data, 'mapImage')) {
                     customMapImage = data.mapImage || null;
-                    const base = document.getElementById('baseImg');
-                    if (base) {
-                        if (customMapImage) {
-                            base.src = customMapImage;
-                            base.style.display = 'block';
-                        } else {
-                            base.src = '';
-                            base.style.display = 'none';
-                        }
-                    }
                 }
+                applyMapImageSrc();
 
                 saveLocal();
                 redrawPaintLayer();
@@ -1319,16 +1334,6 @@
                 }
                 if (Object.prototype.hasOwnProperty.call(parsed, 'mapImage')) {
                     customMapImage = parsed.mapImage || null;
-                    const base = document.getElementById('baseImg');
-                    if (base) {
-                        if (customMapImage) {
-                            base.src = customMapImage;
-                            base.style.display = 'block';
-                        } else {
-                            base.src = '';
-                            base.style.display = 'none';
-                        }
-                    }
                 }
             } else {
                 areaStatus = {};
@@ -1337,13 +1342,12 @@
                 // この部屋の保存データが端末に無い場合は、別の部屋で
                 // セットしたカスタム画像が残らないようデフォルトに戻す。
                 customMapImage = null;
-                const base = document.getElementById('baseImg');
-                if (base) {
-                    base.src = 'img/image.png';
-                    base.style.display = 'block';
-                }
             }
         } catch (e) {}
+        // 画像の読み込み開始はここ1箇所にまとめる。以前はHTML側の初期src属性と
+        // ここでのsrc書き換えが両方走り、タイミング次第で「古い読み込み失敗
+        // イベント」が新しい画像を巻き添えで非表示にしてしまう競合があった。
+        applyMapImageSrc();
     }
 
     window.addEventListener('DOMContentLoaded', initUI);
