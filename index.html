@@ -322,6 +322,10 @@
     let selectedNodeIndex = null;
     let isDraggingNode = false;
     let pointerDownPos = null;
+    // 「画像セット」「新しいマップを設定」で読み込んだ背景画像(dataURLまたは外部URL)。
+    // null の場合はデフォルトの img/image.png を使う。これが今まで保存対象に
+    // 入っておらず、他端末に反映されないバグの原因だった。
+    let customMapImage = null;
 
     canvas.width = paintCanvas.width = 1200;
     canvas.height = paintCanvas.height = 1200;
@@ -588,14 +592,53 @@
         const file = input.files[0];
         const reader = new FileReader();
         reader.onload = (e) => {
-            const base = document.getElementById('baseImg');
-            if (base) {
-                base.src = e.target.result;
-                base.style.display = 'block';
-                showStatus('端末からマップ画像をセットしました！', 'success');
-            }
+            resizeImageDataUrl(e.target.result, 1400, 0.75).then((finalDataUrl) => {
+                const base = document.getElementById('baseImg');
+                if (base) {
+                    base.src = finalDataUrl;
+                    base.style.display = 'block';
+                }
+                customMapImage = finalDataUrl;
+                saveLocal();
+                const approxKB = Math.round(finalDataUrl.length / 1024);
+                if (finalDataUrl.length > 900000) {
+                    showStatus('画像をセットしました（約' + approxKB + 'KB）。サイズが大きいため「クラウド保存」に失敗する可能性があります。', 'warning');
+                } else {
+                    showStatus('端末からマップ画像をセットしました！「クラウド保存」を押すと他端末にも反映されます。', 'success');
+                }
+            });
         };
         reader.readAsDataURL(file);
+    }
+
+    // Firestore 1ドキュメントあたりの保存容量制限(約1MB)に収まるように、
+    // 大きすぎる画像は自動で縮小・再圧縮してからdataURLとして返す。
+    function resizeImageDataUrl(dataUrl, maxDim, quality) {
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                let w = img.naturalWidth, h = img.naturalHeight;
+                if (!w || !h) { resolve(dataUrl); return; }
+                if (w <= maxDim && h <= maxDim && dataUrl.length < 900000) {
+                    resolve(dataUrl);
+                    return;
+                }
+                const scale = Math.min(maxDim / w, maxDim / h, 1);
+                const outW = Math.max(1, Math.round(w * scale));
+                const outH = Math.max(1, Math.round(h * scale));
+                const c = document.createElement('canvas');
+                c.width = outW; c.height = outH;
+                const cctx = c.getContext('2d');
+                cctx.drawImage(img, 0, 0, outW, outH);
+                try {
+                    resolve(c.toDataURL('image/jpeg', quality));
+                } catch (e) {
+                    resolve(dataUrl);
+                }
+            };
+            img.onerror = () => resolve(dataUrl);
+            img.src = dataUrl;
+        });
     }
 
     function showStatus(text, type) {
@@ -917,6 +960,7 @@
             startPositions = [];
             homePos = null;
             selectedNodeIndex = null;
+            customMapImage = null;
             const base = document.getElementById('baseImg');
             if (base) {
                 base.src = '';
@@ -937,15 +981,17 @@
         const imgUrl = prompt('マップ背景画像のURLを入力してください（空欄で白紙マップ）:', '');
         if (imgUrl !== null) {
             const base = document.getElementById('baseImg');
+            const trimmedUrl = imgUrl.trim();
             if (base) {
-                if (imgUrl.trim()) {
-                    base.src = imgUrl.trim();
+                if (trimmedUrl) {
+                    base.src = trimmedUrl;
                     base.style.display = 'block';
                 } else {
                     base.src = '';
                     base.style.display = 'none';
                 }
             }
+            customMapImage = trimmedUrl || null;
             mapMasterData = [];
             areaStatus = {};
             startPositions = [];
@@ -1052,7 +1098,8 @@
             homePos: homePos,
             territories: mapMasterData,
             pointsConfig: pointsConfig,
-            targetScore: targetScore
+            targetScore: targetScore,
+            mapImage: customMapImage
         };
 
         saveLocal();
@@ -1163,6 +1210,22 @@
                     mapMasterData = data.territories;
                     updateNodeCountLabel();
                 }
+                // 「画像セット」等で変更したマップ背景画像を反映。
+                // 以前はこのフィールド自体が保存・復元されておらず、
+                // 画像だけ他端末に共有されないバグの原因だった。
+                if (Object.prototype.hasOwnProperty.call(data, 'mapImage')) {
+                    customMapImage = data.mapImage || null;
+                    const base = document.getElementById('baseImg');
+                    if (base) {
+                        if (customMapImage) {
+                            base.src = customMapImage;
+                            base.style.display = 'block';
+                        } else {
+                            base.src = '';
+                            base.style.display = 'none';
+                        }
+                    }
+                }
 
                 saveLocal();
                 redrawPaintLayer();
@@ -1230,7 +1293,8 @@
             homePos: homePos,
             territories: mapMasterData,
             pointsConfig: pointsConfig,
-            targetScore: targetScore
+            targetScore: targetScore,
+            mapImage: customMapImage
         };
         localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
     }
@@ -1253,10 +1317,31 @@
                     mapMasterData = parsed.territories;
                     updateNodeCountLabel();
                 }
+                if (Object.prototype.hasOwnProperty.call(parsed, 'mapImage')) {
+                    customMapImage = parsed.mapImage || null;
+                    const base = document.getElementById('baseImg');
+                    if (base) {
+                        if (customMapImage) {
+                            base.src = customMapImage;
+                            base.style.display = 'block';
+                        } else {
+                            base.src = '';
+                            base.style.display = 'none';
+                        }
+                    }
+                }
             } else {
                 areaStatus = {};
                 startPositions = [];
                 homePos = null;
+                // この部屋の保存データが端末に無い場合は、別の部屋で
+                // セットしたカスタム画像が残らないようデフォルトに戻す。
+                customMapImage = null;
+                const base = document.getElementById('baseImg');
+                if (base) {
+                    base.src = 'img/image.png';
+                    base.style.display = 'block';
+                }
             }
         } catch (e) {}
     }
