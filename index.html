@@ -1,3 +1,6 @@
+
+
+Territory map fixed · HTML
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -66,7 +69,7 @@
     </style>
 </head>
 <body>
-
+ 
 <div class="main-wrapper">
     <div id="map-outer">
         <div id="map-container">
@@ -88,10 +91,10 @@
                 <button class="btn-room" style="background:#d97706;" onclick="promptSwitchRoom()" title="別の部屋に移動または新規作成">切替/新規</button>
             </div>
         </div>
-
+ 
         <div class="controls">
             <div id="statusMessage" class="status-msg"></div>
-
+ 
             <!-- 常時表示されるマップ設定＆オールクリア バー -->
             <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:7px; display:flex; flex-direction:column; gap:6px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -119,12 +122,12 @@
                     </button>
                 </div>
             </div>
-
+ 
             <div class="row-group">
                 <select id="colorSelect" onchange="updateSelectedColor(this.value)"></select>
                 <button class="btn-reset" onclick="if(confirm('現在のマス塗りをすべてリセットしますか？')) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }">クリア</button>
             </div>
-
+ 
             <div style="display:flex; justify-content:space-between; align-items:center; background:#020617; padding:4px 8px; border-radius:6px; border:1px solid #334155; font-size:11px;">
                 <span style="color:#94a3b8; font-weight:bold;">🏷️ マス数字:</span>
                 <div class="toggle-group" style="width:130px;">
@@ -132,7 +135,7 @@
                     <button id="toggle-hidden" class="toggle-btn active" onclick="setDisplayMode('hidden')">隠す</button>
                 </div>
             </div>
-
+ 
             <div class="mode-group">
                 <button id="mode-paint" class="mode-btn active" onclick="setMode('paint')">
                     <span>🖌️</span><span>塗り</span>
@@ -147,7 +150,7 @@
                     <span>🏰</span><span>本拠</span>
                 </button>
             </div>
-
+ 
             <!-- 座標設定ツールパネル -->
             <div id="coordinateEditorBox" class="node-tool-box" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -172,7 +175,7 @@
                     <button class="action-chip" onclick="clearAllMapAndNodes()" style="color:#f87171; font-weight:bold; background:#450a0a; border-color:#991b1b;" title="マップ画像と全マス座標の両方を消去して完全白紙にする">🗑️ マップと座標の両方を全部消す</button>
                 </div>
             </div>
-
+ 
             <!-- クラウド保存＆読込ボタン -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
                 <button class="btn-cloud-save" onclick="saveToCloud()" id="btnSaveCloud" title="部屋名のデータとしてFirebaseクラウドに保存">
@@ -182,23 +185,23 @@
                     <span>🔄</span><span>最新取得</span>
                 </button>
             </div>
-
+ 
             <button class="btn-cloud-fetch" onclick="savePngImage()" style="width:100%;">
                 <span>📸</span><span>マップ画像をPNG保存</span>
             </button>
         </div>
-
+ 
         <div id="score-container">
             <div id="score-board" class="score-list"></div>
         </div>
-
+ 
         <div class="cloud-info-bar">
             <span>⚡ クラウド連携: Firebase (直接同期)</span>
             <span>無料・無制限</span>
         </div>
     </div>
 </div>
-
+ 
 <!-- レベル別得点 ＆ 目標ポイント設定モーダル -->
 <div id="pointsConfigModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:9999; align-items:center; justify-content:center; padding:16px;">
     <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:480px; width:100%; color:#f5f5f5; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7); font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
@@ -226,7 +229,7 @@
                     <button type="button" onclick="setTargetPreset(100000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">10万</button>
                 </div>
             </div>
-
+ 
             <!-- Lv別ポイント -->
             <div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -275,7 +278,7 @@
         </div>
     </div>
 </div>
-
+ 
 <script>
     // -------------------------------------------------------------
     // マップ定義・同盟色設定
@@ -284,12 +287,19 @@
     let pointsConfig = {"1":100,"2":200,"3":600,"4":2000,"5":3000,"6":4000,"7":6000};
     let targetScore = 50000;
     const colorList = ["#e6194B","#3cb44b","#4363d8","#ffe119","#f58231","#911eb4","#38bdf8","#f032e6","#bfef45","#fabed4","#469990","#dcbeff","#9A6324","#800000","#aaffc3","#808000","#ffd8b1","#000075","#ff7b54","#0891b2","#d97706","#a9a9a9","#be123c","#145a32"];
+ 
+    // ▼▼▼ 色塗りの透過度はここだけ調整すればOK ▼▼▼
+    // 0(完全に透明・見えない) 〜 255(完全に不透明・下の文字や地図が見えない) の数値。
+    // 数字や地図の文字が見えにくいときはこの値を下げる、色が薄すぎるときは上げる。
+    // 目安: 130〜150=かなり透ける／160〜180=バランス型／200以上=かなり濃いめ
+    const PAINT_ALPHA = 165;
+    // ▲▲▲ 色塗りの透過度はここだけ調整すればOK ▲▲▲
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
-
+ 
     // 🌟 Firebase設定 (Google Firestore 直接通信)
     const FIREBASE_PROJECT_ID = "map-share0193";
     const FIREBASE_REST_BASE = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/rooms/";
-
+ 
     function getRoomFromUrl() {
         try {
             const params = new URLSearchParams(window.location.search);
@@ -300,17 +310,17 @@
         } catch (e) {}
         return 'main';
     }
-
+ 
     let currentRoom = getRoomFromUrl();
     updateRoomHeaderDisplay();
-
+ 
     function updateRoomHeaderDisplay() {
         const display = document.getElementById('roomNameDisplay');
         if (display) {
             display.textContent = currentRoom === 'main' ? 'メイン (main)' : currentRoom;
         }
     }
-
+ 
     const canvas = document.getElementById('mapCanvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
     const paintCanvas = document.createElement('canvas'), pCtx = paintCanvas.getContext('2d', { willReadFrequently: true });
     
@@ -326,17 +336,17 @@
     // null の場合はデフォルトの img/image.png を使う。これが今まで保存対象に
     // 入っておらず、他端末に反映されないバグの原因だった。
     let customMapImage = null;
-
+ 
     canvas.width = paintCanvas.width = 1200;
     canvas.height = paintCanvas.height = 1200;
-
+ 
     function handleImageLoad(img) {
         isImageLoaded = true;
         createMaskFromImage(img);
         redrawPaintLayer();
         render();
     }
-
+ 
     function handleImageError(img) {
         // 保存されていたカスタム画像(customMapImage)の読み込みに失敗した場合、
         // 画面が真っ黒のままになってしまわないよう、デフォルトマップに自動で戻す。
@@ -354,7 +364,7 @@
         redrawPaintLayer();
         render();
     }
-
+ 
     // マップ背景画像のsrcをここで一元的に設定する。
     // 以前はHTML側に固定で src="img/image.png" が書かれており、ページ読込時に
     // その画像取得(404になりがち)が先に走った直後、JS側でカスタム画像に
@@ -372,7 +382,7 @@
             base.style.display = 'block';
         }
     }
-
+ 
     function setupFromBase(img) {
         setupCanvas(img.naturalWidth || 1200, img.naturalHeight || 1200);
         const tCanvas = document.createElement('canvas'); tCanvas.width = canvas.width; tCanvas.height = canvas.height;
@@ -381,12 +391,12 @@
         redrawPaintLayer();
         render();
     }
-
+ 
     function setupCanvas(w, h) {
         canvas.width = paintCanvas.width = w;
         canvas.height = paintCanvas.height = h;
     }
-
+ 
     function createMaskFromImage(img) {
         try {
             setupFromBase(img);
@@ -394,7 +404,7 @@
             maskData = null;
         }
     }
-
+ 
     function hexToRgb(hex) {
         return {
             r: parseInt(hex.slice(1, 3), 16) || 0,
@@ -402,7 +412,7 @@
             b: parseInt(hex.slice(5, 7), 16) || 0
         };
     }
-
+ 
     function fillCircle(point, color) {
         const px = point.x * canvas.width / 100, py = point.y * canvas.height / 100;
         pCtx.save();
@@ -413,6 +423,7 @@
             pCtx.fill();
         } else {
             pCtx.globalCompositeOperation = 'source-over';
+            pCtx.globalAlpha = PAINT_ALPHA / 255;
             pCtx.fillStyle = color;
             pCtx.beginPath();
             pCtx.arc(px, py, 26, 0, Math.PI * 2);
@@ -420,39 +431,39 @@
         }
         pCtx.restore();
     }
-
+ 
     function floodFill(startX, startY, targetRgb, isErase) {
         const w = canvas.width, h = canvas.height;
         const pImgData = pCtx.getImageData(0, 0, w, h);
         const pData = pImgData.data;
         const visited = new Uint8Array(w * h);
         const stack = [[startX, startY]];
-
+ 
         while (stack.length > 0) {
             const [cx, cy] = stack.pop();
             const idx = (cy * w + cx) * 4;
             if (cx < 0 || cx >= w || cy < 0 || cy >= h || visited[cy * w + cx]) continue;
             visited[cy * w + cx] = 1;
-
+ 
             if (maskData) {
                 const mr = maskData[idx], mg = maskData[idx+1], mb = maskData[idx+2];
                 if (mr < 60 && mg < 60 && mb < 60) continue;
             }
-
+ 
             if (isErase) {
                 pData[idx+3] = 0;
             } else {
                 pData[idx] = targetRgb.r;
                 pData[idx+1] = targetRgb.g;
                 pData[idx+2] = targetRgb.b;
-                pData[idx+3] = 235;
+                pData[idx+3] = PAINT_ALPHA;
             }
-
+ 
             stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
         }
         pCtx.putImageData(pImgData, 0, 0);
     }
-
+ 
     function redrawPaintLayer() {
         pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
         Object.entries(areaStatus).forEach(([key, color]) => {
@@ -467,22 +478,22 @@
             }
         });
     }
-
+ 
     function openPointsModal() {
         const modal = document.getElementById('pointsConfigModal');
         if (!modal) return;
         modal.style.display = 'flex';
-
+ 
         const inputTarget = document.getElementById('inputTargetScore');
         if (inputTarget) inputTarget.value = targetScore || 50000;
-
+ 
         let totalPts = 0;
         mapMasterData.forEach(p => {
             totalPts += (pointsConfig[p.lv] || 100);
         });
         const lblTotal = document.getElementById('modalTotalMapScore');
         if (lblTotal) lblTotal.textContent = 'マップ総計: ' + totalPts.toLocaleString() + ' pts';
-
+ 
         for (let lv = 1; lv <= 7; lv++) {
             const input = document.getElementById('input-pt-' + lv);
             if (input) input.value = pointsConfig[lv] || 100;
@@ -493,17 +504,17 @@
             }
         }
     }
-
+ 
     function closePointsModal() {
         const modal = document.getElementById('pointsConfigModal');
         if (modal) modal.style.display = 'none';
     }
-
+ 
     function setTargetPreset(val) {
         const input = document.getElementById('inputTargetScore');
         if (input) input.value = val;
     }
-
+ 
     function applyPointsPreset(type) {
         let preset = {};
         if (type === 'standard') {
@@ -521,7 +532,7 @@
             if (input) input.value = preset[lv] || 100;
         }
     }
-
+ 
     function savePointsConfig() {
         const inputTarget = document.getElementById('inputTargetScore');
         if (inputTarget) {
@@ -538,7 +549,7 @@
         updateBoard();
         showStatus('マスの得点設定を保存・再計算しました！', 'success');
     }
-
+ 
     function initUI() {
         colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
         const select = document.getElementById('colorSelect');
@@ -555,12 +566,12 @@
         updateBoard();
         redrawPaintLayer();
         render();
-
+ 
         if (currentRoom) {
             loadFromCloud(false);
         }
     }
-
+ 
     function updateSelectedColor(val) {
         selectedColor = val;
         const select = document.getElementById('colorSelect');
@@ -573,7 +584,7 @@
         }
         updateBoard();
     }
-
+ 
     function setMode(mode) {
         currentMode = mode;
         document.querySelectorAll('.mode-btn').forEach(b => {
@@ -585,14 +596,14 @@
             if (mode === 'edit_node') btn.classList.add('edit-active');
             else btn.classList.add('active');
         }
-
+ 
         const editBox = document.getElementById('coordinateEditorBox');
         if (editBox) {
             editBox.style.display = mode === 'edit_node' ? 'flex' : 'none';
         }
         render();
     }
-
+ 
     function setPlacementLevel(lv) {
         activePlacementLevel = lv;
         for (let i = 1; i <= 7; i++) {
@@ -600,21 +611,21 @@
             if (b) b.classList.toggle('active', i === lv);
         }
     }
-
+ 
     function setDisplayMode(mode) {
         nodeDisplayMode = mode;
         document.getElementById('toggle-badge').classList.toggle('active', mode === 'badge');
         document.getElementById('toggle-hidden').classList.toggle('active', mode === 'hidden');
         render();
     }
-
+ 
     function updateNodeCountLabel() {
         const el = document.getElementById('nodeCountLabel');
         if (el) el.textContent = mapMasterData.length;
         const badge = document.getElementById('mapNodeBadge');
         if (badge) badge.textContent = mapMasterData.length + 'マス';
     }
-
+ 
     function handleFileInput(input) {
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
@@ -634,7 +645,7 @@
         };
         reader.readAsDataURL(file);
     }
-
+ 
     // Firestore 1ドキュメントあたりの保存容量制限(約1MB)に収まるように、
     // 大きすぎる画像は自動で縮小・再圧縮してからdataURLとして返す。
     function resizeImageDataUrl(dataUrl, maxDim, quality) {
@@ -664,7 +675,7 @@
             img.src = dataUrl;
         });
     }
-
+ 
     function showStatus(text, type) {
         const el = document.getElementById('statusMessage');
         if (!el) return;
@@ -681,11 +692,11 @@
     canvas.addEventListener('pointerdown', (e) => {
         pointerDownPos = { x: e.clientX, y: e.clientY };
         isDraggingNode = false;
-
+ 
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
         const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
-
+ 
         if (currentMode === 'edit_node') {
             let nearestIdx = -1, minD = 40;
             mapMasterData.forEach((p, idx) => {
@@ -693,7 +704,7 @@
                 const d = Math.hypot(px - x, py - y);
                 if (d < minD) { minD = d; nearestIdx = idx; }
             });
-
+ 
             if (nearestIdx !== -1) {
                 selectedNodeIndex = nearestIdx;
                 isDraggingNode = true;
@@ -701,7 +712,7 @@
             }
         }
     });
-
+ 
     canvas.addEventListener('pointermove', (e) => {
         if (currentMode === 'edit_node' && isDraggingNode && selectedNodeIndex !== null) {
             const rect = canvas.getBoundingClientRect();
@@ -709,13 +720,13 @@
             const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
             const pctX = Number(((x / canvas.width) * 100).toFixed(2));
             const pctY = Number(((y / canvas.height) * 100).toFixed(2));
-
+ 
             mapMasterData[selectedNodeIndex].x = pctX;
             mapMasterData[selectedNodeIndex].y = pctY;
             render();
         }
     });
-
+ 
     canvas.addEventListener('pointerup', (e) => {
         if (isDraggingNode) {
             isDraggingNode = false;
@@ -724,18 +735,18 @@
             saveLocal();
             return;
         }
-
+ 
         if (!pointerDownPos) return;
         const dist = Math.hypot(e.clientX - pointerDownPos.x, e.clientY - pointerDownPos.y);
         pointerDownPos = null;
         if (dist > 10) return;
-
+ 
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
         const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
         const pctX = Number(((x / canvas.width) * 100).toFixed(2));
         const pctY = Number(((y / canvas.height) * 100).toFixed(2));
-
+ 
         if (currentMode === 'start') {
             const idx = startPositions.findIndex(p => Math.hypot(p.x - x, p.y - y) < 40);
             if (idx > -1) startPositions.splice(idx, 1);
@@ -744,14 +755,14 @@
             render();
             return;
         }
-
+ 
         if (currentMode === 'home') {
             homePos = (homePos && Math.hypot(homePos.x - x, homePos.y - y) < 40) ? null : { x, y };
             saveLocal();
             render();
             return;
         }
-
+ 
         if (currentMode === 'edit_node') {
             let nearestIdx = -1, minD = 35;
             mapMasterData.forEach((p, idx) => {
@@ -759,7 +770,7 @@
                 const d = Math.hypot(px - x, py - y);
                 if (d < minD) { minD = d; nearestIdx = idx; }
             });
-
+ 
             if (nearestIdx !== -1) {
                 selectedNodeIndex = nearestIdx;
             } else {
@@ -772,7 +783,7 @@
             render();
             return;
         }
-
+ 
         if (currentMode === 'paint') {
             let nearest = null, minDist = 65;
             mapMasterData.forEach(p => {
@@ -780,13 +791,13 @@
                 const d = Math.hypot(px - x, py - y);
                 if (d < minDist) { minDist = d; nearest = p; }
             });
-
+ 
             if (nearest) {
                 applyPaint(nearest, x, y);
             }
         }
     });
-
+ 
     canvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         if (currentMode === 'edit_node') {
@@ -811,7 +822,7 @@
             }
         }
     });
-
+ 
     function applyPaint(nearest, x, y) {
         let targetKey = nearest.x + '-' + nearest.y;
         for (const k in areaStatus) {
@@ -824,7 +835,7 @@
                 }
             }
         }
-
+ 
         const rgb = hexToRgb(selectedColor);
         if (areaStatus[targetKey] && areaStatus[targetKey].toLowerCase() === selectedColor.toLowerCase()) {
             if (maskData) floodFill(x, y, { r: 0, g: 0, b: 0 }, true);
@@ -839,7 +850,7 @@
         updateBoard();
         render();
     }
-
+ 
     function render() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const base = document.getElementById('baseImg');
@@ -848,7 +859,7 @@
         } else {
             ctx.fillStyle = '#0b0f19';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
+ 
             ctx.strokeStyle = '#1e293b';
             ctx.lineWidth = 1;
             for (let x = 0; x <= canvas.width; x += 60) {
@@ -864,13 +875,13 @@
             });
             ctx.setLineDash([]);
         }
-
+ 
         ctx.drawImage(paintCanvas, 0, 0);
-
+ 
         mapMasterData.forEach((p, idx) => {
             const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
             const isSelected = (currentMode === 'edit_node' && selectedNodeIndex === idx);
-
+ 
             if (isSelected) {
                 ctx.beginPath();
                 ctx.arc(px, py, 26, 0, Math.PI * 2);
@@ -880,7 +891,7 @@
                 ctx.lineWidth = 3;
                 ctx.stroke();
             }
-
+ 
             if (currentMode === 'edit_node' || nodeDisplayMode === 'badge') {
                 const color = areaStatus[p.x + '-' + p.y];
                 const badgeRadius = p.lv >= 6 ? 16 : p.lv >= 4 ? 13 : 11;
@@ -891,13 +902,13 @@
                 ctx.lineWidth = isSelected ? 2.5 : 2;
                 ctx.strokeStyle = isSelected ? '#38bdf8' : (color ? '#ffffff' : (p.lv === 7 ? '#f59e0b' : p.lv >= 5 ? '#ec4899' : p.lv >= 3 ? '#3b82f6' : '#64748b'));
                 ctx.stroke();
-
+ 
                 ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold ' + (p.lv >= 6 ? '12px' : '10px') + ' sans-serif';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 ctx.fillText('' + p.lv, px, py);
-
+ 
                 if (currentMode === 'edit_node') {
                     ctx.font = '9px monospace';
                     ctx.fillStyle = '#94a3b8';
@@ -905,7 +916,7 @@
                 }
             }
         });
-
+ 
         ctx.font = 'bold 44px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
@@ -920,7 +931,7 @@
             ctx.shadowBlur = 0;
         }
     }
-
+ 
     function copyCoordinatesJson() {
         const json = JSON.stringify(mapMasterData, null, 2);
         navigator.clipboard.writeText(json).then(() => {
@@ -929,7 +940,7 @@
             prompt('以下の座標JSONをコピーしてください:', json);
         });
     }
-
+ 
     function importCoordinatesPrompt() {
         const input = prompt('インポートするマス座標JSON配列を貼り付けてください:');
         if (!input) return;
@@ -950,7 +961,7 @@
             alert('JSON解析エラー: ' + e.message);
         }
     }
-
+ 
     function restoreDefault160() {
         if (confirm('標準の160マス座標を復元しますか？現在の座標は上書きされます。')) {
             mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
@@ -962,7 +973,7 @@
             showStatus('標準160マスの座標を復元しました！', 'success');
         }
     }
-
+ 
     function clearAllNodes() {
         if (confirm('すべてのマス座標を消去して白紙にしますか？（ゼロから自由に座標を打てます）')) {
             mapMasterData = [];
@@ -976,7 +987,7 @@
             showStatus('全マス座標をクリアしました。マップ上をクリックして新規座標を配置してください。', 'success');
         }
     }
-
+ 
     function clearAllMapAndNodes() {
         if (confirm('マップ画像とすべてのマス座標の両方を消去して完全な白紙にしますか？')) {
             mapMasterData = [];
@@ -998,7 +1009,7 @@
             showStatus('マップ画像と全マス座標の両方を消去しました。', 'success');
         }
     }
-
+ 
     function setupNewMapPrompt() {
         const name = prompt('新しいマップ名を入力してください:', '新規マップ');
         if (!name) return;
@@ -1029,7 +1040,7 @@
             showStatus('新しいマップ「' + name + '」を設定しました！座標をプロットしてください。', 'success');
         }
     }
-
+ 
     function updateBoard() {
         colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
         let totalOccupied = 0;
@@ -1049,7 +1060,7 @@
                 totalOccupied++;
             }
         });
-
+ 
         const activeList = colorList.map((c, i) => ({
             hex: c,
             name: colorNames[i],
@@ -1058,15 +1069,15 @@
         }))
         .filter(item => item.count > 0)
         .sort((a, b) => b.score - a.score);
-
+ 
         const container = document.getElementById('score-board');
         container.innerHTML = '';
-
+ 
         const summaryHeader = document.createElement('div');
         summaryHeader.style.cssText = 'padding: 6px 4px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; margin-bottom: 6px;';
         summaryHeader.innerHTML = '<span>占領中: <strong style="color:#fbbf24;">' + activeList.length + '</strong> 同盟 (' + totalOccupied + 'マス)</span><span style="font-size:10px; color:#fbbf24; background:rgba(217, 119, 6, 0.2); border:1px solid rgba(217, 119, 6, 0.4); padding:1px 5px; border-radius:4px; font-weight:bold;">目標: ' + (targetScore || 50000).toLocaleString() + 'pt</span>';
         container.appendChild(summaryHeader);
-
+ 
         if (activeList.length === 0) {
             const emptyNotice = document.createElement('div');
             emptyNotice.style.cssText = 'padding: 24px 12px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.6;';
@@ -1074,7 +1085,7 @@
             container.appendChild(emptyNotice);
             return;
         }
-
+ 
         const tScore = targetScore || 50000;
         activeList.forEach((item, rank) => {
             const pct = Math.min(100, Math.round((item.score / tScore) * 100));
@@ -1101,17 +1112,17 @@
             container.appendChild(card);
         });
     }
-
+ 
     // -------------------------------------------------------------
     // 🌟 Firebase クラウド同期 (APIキー認証付き・完全直結)
     // -------------------------------------------------------------
     const FIREBASE_API_KEY = "AIzaSyCXjs2UBKXildGnrA8BMV3UO6HdKK-LnKg";
-
+ 
     async function saveToCloud() {
         const btn = document.getElementById('btnSaveCloud');
         if (btn) btn.disabled = true;
         showStatus('Firebaseに部屋「' + currentRoom + '」を保存中...', 'loading');
-
+ 
         const fullData = {
             roomName: currentRoom,
             room: currentRoom,
@@ -1125,9 +1136,9 @@
             targetScore: targetScore,
             mapImage: customMapImage
         };
-
+ 
         saveLocal();
-
+ 
         let compressedStr = '';
         try {
             if (window.LZString && typeof window.LZString.compressToEncodedURIComponent === 'function') {
@@ -1138,7 +1149,7 @@
         } catch (e) {
             compressedStr = encodeURIComponent(JSON.stringify(fullData));
         }
-
+ 
         try {
             const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY;
             const res = await fetch(docUrl, {
@@ -1151,7 +1162,7 @@
                     }
                 })
             });
-
+ 
             if (!res.ok) throw new Error('HTTP ' + res.status);
             showStatus('部屋「' + currentRoom + '」の作戦データをクラウドに保存しました！', 'success');
         } catch (err) {
@@ -1161,14 +1172,14 @@
             if (btn) btn.disabled = false;
         }
     }
-
+ 
     async function loadFromCloud(isManual) {
         const btn = document.getElementById('btnFetchCloud');
         if (btn && isManual) btn.disabled = true;
         if (isManual) {
             showStatus('部屋「' + currentRoom + '」のデータをクラウドから取得中...', 'loading');
         }
-
+ 
         try {
            const docUrl = FIREBASE_REST_BASE + encodeURIComponent(currentRoom) + '?key=' + FIREBASE_API_KEY;
             const res = await fetch(docUrl);
@@ -1182,12 +1193,12 @@
                 render();
                 return;
             }
-
+ 
             if (!res.ok) throw new Error('HTTP ' + res.status);
-
+ 
             const docJson = await res.json();
             const text = (docJson.fields && docJson.fields.str && docJson.fields.str.stringValue) || "";
-
+ 
             if (!text) {
                 if (isManual) {
                     showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
@@ -1198,7 +1209,7 @@
                 render();
                 return;
             }
-
+ 
             let data = null;
             try {
                 if (window.LZString) {
@@ -1206,21 +1217,21 @@
                     if (dec) data = JSON.parse(dec);
                 }
             } catch (e) {}
-
+ 
             if (!data) {
                 try {
                     const dec = decodeURIComponent(text);
                     if (dec && dec.startsWith('{')) data = JSON.parse(dec);
                 } catch (e) {}
             }
-
+ 
             if (!data) {
                 try {
                     const parsed = JSON.parse(text);
                     data = parsed.data || parsed;
                 } catch (e) {}
             }
-
+ 
             if (data) {
                 if (data.areaStatus) areaStatus = data.areaStatus;
                 if (data.startPositions) startPositions = data.startPositions;
@@ -1241,7 +1252,7 @@
                     customMapImage = data.mapImage || null;
                 }
                 applyMapImageSrc();
-
+ 
                 saveLocal();
                 redrawPaintLayer();
                 updateBoard();
@@ -1265,7 +1276,7 @@
             if (btn) btn.disabled = false;
         }
     }
-
+ 
     function promptSwitchRoom() {
         const next = prompt('移動・作成する部屋名を入力してください（例: 第1ギルド, 予選A）:', currentRoom);
         if (next && next.trim() !== '') {
@@ -1283,7 +1294,7 @@
             loadFromCloud(true);
         }
     }
-
+ 
     function copyRoomLink() {
         const url = new URL(window.location.href);
         url.searchParams.set('room', currentRoom);
@@ -1293,14 +1304,14 @@
             prompt('共有リンク:', url.toString());
         });
     }
-
+ 
     function savePngImage() {
         const a = document.createElement('a');
         a.download = 'territory_' + currentRoom + '_' + Date.now() + '.png';
         a.href = canvas.toDataURL('image/png');
         a.click();
     }
-
+ 
     function saveLocal() {
         const state = {
             areaStatus: areaStatus,
@@ -1313,7 +1324,7 @@
         };
         localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
     }
-
+ 
     function loadLocal() {
         try {
             const raw = localStorage.getItem('territory_save_room_' + currentRoom);
@@ -1349,7 +1360,7 @@
         // イベント」が新しい画像を巻き添えで非表示にしてしまう競合があった。
         applyMapImageSrc();
     }
-
+ 
     window.addEventListener('DOMContentLoaded', initUI);
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
         initUI();
@@ -1357,3 +1368,4 @@
 </script>
 </body>
 </html>
+ 
