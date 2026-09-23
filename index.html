@@ -346,12 +346,22 @@
     const FIREBASE_PROJECT_ID = "map-share0193";
     const FIREBASE_REST_BASE = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/rooms/";
  
+    // 部屋名に「/」「\」「#」「?」が含まれると、URLエンコードで見た目が
+    // 崩れたり(例: %2F)、Firestoreの保存先パスが意図しない階層として
+    // 解釈される恐れがあるため、これらは自動的に「-」へ置き換える。
+    function sanitizeRoomName(name) {
+        return name.replace(/[\/\\#?]/g, '-');
+    }
+ 
     function getRoomFromUrl() {
         try {
             const params = new URLSearchParams(window.location.search);
+            // 注: URLSearchParams.get() の時点で既にデコード済みのため、
+            // ここでさらに decodeURIComponent() すると二重デコードになり、
+            // 部屋名に「%」を含む場合などに壊れる恐れがあったため削除。
             const room = params.get('room') || params.get('id');
             if (room && room.trim() !== '') {
-                return decodeURIComponent(room.trim());
+                return sanitizeRoomName(room.trim());
             }
         } catch (e) {}
         return 'main';
@@ -1332,7 +1342,12 @@
     function promptSwitchRoom() {
         const next = prompt('移動・作成する部屋名を入力してください（例: 第1ギルド, 予選A）:', currentRoom);
         if (next && next.trim() !== '') {
-            currentRoom = next.trim();
+            const trimmed = next.trim();
+            const sanitized = sanitizeRoomName(trimmed);
+            if (sanitized !== trimmed) {
+                showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。', 'warning');
+            }
+            currentRoom = sanitized;
             updateRoomHeaderDisplay();
             try {
                 const url = new URL(window.location.href);
