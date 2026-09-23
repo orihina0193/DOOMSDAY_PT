@@ -86,6 +86,7 @@
             <div style="display:flex; gap:4px; flex-shrink:0;">
                 <button class="btn-room" style="background:#2563eb;" onclick="copyRoomLink()" title="ギルメンにURLを共有">🔗 共有</button>
                 <button class="btn-room" style="background:#d97706;" onclick="promptSwitchRoom()" title="別の部屋に移動または新規作成">切替/新規</button>
+                <button class="btn-room" style="background:#4b5563;" onclick="renameCurrentRoom()" title="今表示中のデータを、新しい部屋名でそのまま保存し直します">🏷️ リネーム</button>
             </div>
         </div>
  
@@ -1404,6 +1405,37 @@
         } finally {
             if (btn) btn.disabled = false;
         }
+    }
+ 
+    // 今画面に表示されている（メモリ上の）データを、そのまま新しい部屋名で
+    // 保存し直す「引っ越し」機能。過去に部屋名が生のスラッシュ・%エンコード
+    // 済みなど複数の形で保存されてしまっていても、「今見えているものが正解」
+    // として確実に新しい名前に移せるようにするための機能。
+    // 元の部屋名のデータは削除せずそのまま残す。
+    async function renameCurrentRoom() {
+        const input = prompt('この部屋（現在の名前: ' + currentRoom + '）の新しい名前を入力してください。\n今表示中のデータがそのまま新しい名前で保存されます（元の部屋のデータは残ります）。', currentRoom);
+        if (input === null) return;
+        const trimmed = input.trim();
+        if (!trimmed) return;
+        const sanitized = sanitizeRoomName(trimmed);
+        if (sanitized === currentRoom) {
+            showStatus('現在と同じ部屋名です。', 'warning');
+            return;
+        }
+        if (sanitized !== trimmed) {
+            showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。', 'warning');
+        }
+        const oldRoom = currentRoom;
+        currentRoom = sanitized;
+        updateRoomHeaderDisplay();
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.set('room', currentRoom);
+            window.history.pushState({}, '', url.toString());
+        } catch (e) {}
+        saveLocal();
+        await saveToCloud();
+        showStatus('部屋名を「' + oldRoom + '」から「' + currentRoom + '」に変更し、今のデータを引っ越しました！（元の部屋のデータはそのまま残っています）', 'success');
     }
  
     function promptSwitchRoom() {
