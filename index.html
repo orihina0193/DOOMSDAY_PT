@@ -1,6 +1,3 @@
-
-
-Territory map fixed · HTML
 <!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -125,6 +122,7 @@ Territory map fixed · HTML
  
             <div class="row-group">
                 <select id="colorSelect" onchange="updateSelectedColor(this.value)"></select>
+                <button class="btn-reset" onclick="renameSelectedColor()" title="選択中の色に同盟名などお好きな名前をつけられます" style="flex:0 0 auto; padding:7px 10px;">✏️名前</button>
                 <button class="btn-reset" onclick="if(confirm('現在のマス塗りをすべてリセットしますか？')) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }">クリア</button>
             </div>
  
@@ -295,6 +293,54 @@ Territory map fixed · HTML
     const PAINT_ALPHA = 165;
     // ▲▲▲ 色塗りの透過度はここだけ調整すればOK ▲▲▲
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
+ 
+    // 色ごとの表示名の上書き（例: 「1. 赤 (レッド)」→「○○同盟」）。
+    // キーはcolorListの色コード、値は入力された任意の名前。
+    // 部屋ごとに保存・共有されるので、対戦のたびに設定し直せる。
+    let customColorNames = {};
+ 
+    // 選択肢や得点ボードに出す「表示名」を決定する。カスタム名が
+    // 設定されていればそれを、無ければデフォルトの色名を返す。
+    function getColorLabel(hex) {
+        const custom = customColorNames[hex];
+        if (custom && String(custom).trim()) return String(custom).trim();
+        const idx = colorList.indexOf(hex);
+        return idx >= 0 ? colorNames[idx] : hex;
+    }
+ 
+    // colorSelectの表示テキストを、現在のcustomColorNamesに合わせて更新する。
+    function refreshColorSelectLabels() {
+        const select = document.getElementById('colorSelect');
+        if (!select) return;
+        Array.from(select.options).forEach(opt => {
+            opt.textContent = getColorLabel(opt.value);
+        });
+    }
+ 
+    // 現在選択中の色に、任意の名前（同盟名など）をつける。
+    function renameSelectedColor() {
+        const defaultLabel = (() => {
+            const idx = colorList.indexOf(selectedColor);
+            return idx >= 0 ? colorNames[idx] : selectedColor;
+        })();
+        const current = customColorNames[selectedColor] || '';
+        const input = prompt('この色（デフォルト名: ' + defaultLabel + '）につける名前を入力してください。\n空欄で確定するとデフォルト名に戻ります。', current);
+        if (input === null) return; // キャンセル
+        const trimmed = input.trim();
+        if (trimmed) {
+            customColorNames[selectedColor] = trimmed;
+        } else {
+            delete customColorNames[selectedColor];
+        }
+        refreshColorSelectLabels();
+        updateBoard();
+        saveLocal();
+        if (trimmed) {
+            showStatus('この色の名前を「' + trimmed + '」に変更しました！「クラウド保存」を押すと他端末にも反映されます。', 'success');
+        } else {
+            showStatus('デフォルトの色名に戻しました。', 'success');
+        }
+    }
  
     // 🌟 Firebase設定 (Google Firestore 直接通信)
     const FIREBASE_PROJECT_ID = "map-share0193";
@@ -563,6 +609,7 @@ Territory map fixed · HTML
         updateSelectedColor(colorList[0]);
         updateNodeCountLabel();
         loadLocal();
+        refreshColorSelectLabels();
         updateBoard();
         redrawPaintLayer();
         render();
@@ -1063,7 +1110,7 @@ Territory map fixed · HTML
  
         const activeList = colorList.map((c, i) => ({
             hex: c,
-            name: colorNames[i],
+            name: getColorLabel(c),
             score: scores[c] || 0,
             count: counts[c] || 0
         }))
@@ -1134,7 +1181,8 @@ Territory map fixed · HTML
             territories: mapMasterData,
             pointsConfig: pointsConfig,
             targetScore: targetScore,
-            mapImage: customMapImage
+            mapImage: customMapImage,
+            customColorNames: customColorNames
         };
  
         saveLocal();
@@ -1238,6 +1286,9 @@ Territory map fixed · HTML
                 if (data.homePos !== undefined) homePos = data.homePos;
                 if (data.pointsConfig) pointsConfig = data.pointsConfig;
                 if (typeof data.targetScore === 'number') targetScore = data.targetScore;
+                if (data.customColorNames && typeof data.customColorNames === 'object') {
+                    customColorNames = data.customColorNames;
+                }
                 if (data.territories && Array.isArray(data.territories)) {
                     // 注: 以前は「.length > 0」の条件があり、他端末がマスを
                     // 全消去して保存した場合にその「空」の状態が反映されず、
@@ -1252,6 +1303,7 @@ Territory map fixed · HTML
                     customMapImage = data.mapImage || null;
                 }
                 applyMapImageSrc();
+                refreshColorSelectLabels();
  
                 saveLocal();
                 redrawPaintLayer();
@@ -1320,7 +1372,8 @@ Territory map fixed · HTML
             territories: mapMasterData,
             pointsConfig: pointsConfig,
             targetScore: targetScore,
-            mapImage: customMapImage
+            mapImage: customMapImage,
+            customColorNames: customColorNames
         };
         localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
     }
@@ -1343,6 +1396,11 @@ Territory map fixed · HTML
                     mapMasterData = parsed.territories;
                     updateNodeCountLabel();
                 }
+                if (parsed.customColorNames && typeof parsed.customColorNames === 'object') {
+                    customColorNames = parsed.customColorNames;
+                } else {
+                    customColorNames = {};
+                }
                 if (Object.prototype.hasOwnProperty.call(parsed, 'mapImage')) {
                     customMapImage = parsed.mapImage || null;
                 }
@@ -1351,14 +1409,16 @@ Territory map fixed · HTML
                 startPositions = [];
                 homePos = null;
                 // この部屋の保存データが端末に無い場合は、別の部屋で
-                // セットしたカスタム画像が残らないようデフォルトに戻す。
+                // セットしたカスタム画像・同盟名が残らないようデフォルトに戻す。
                 customMapImage = null;
+                customColorNames = {};
             }
         } catch (e) {}
         // 画像の読み込み開始はここ1箇所にまとめる。以前はHTML側の初期src属性と
         // ここでのsrc書き換えが両方走り、タイミング次第で「古い読み込み失敗
         // イベント」が新しい画像を巻き添えで非表示にしてしまう競合があった。
         applyMapImageSrc();
+        refreshColorSelectLabels();
     }
  
     window.addEventListener('DOMContentLoaded', initUI);
