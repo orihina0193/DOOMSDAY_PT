@@ -353,6 +353,22 @@
         return name.replace(/[\/\\#?]/g, '-');
     }
  
+    // サニタイズによって部屋名が変わった場合、以前その「記号入りの生の名前」
+    // で保存されていたローカルデータを、新しい安全な部屋名に自動で引き継ぐ。
+    // (このタイミングではまだFIREBASE_API_KEY等が未定義のため、
+    //  クラウド側の引き継ぎは別途 migrateLegacyCloudRoom() で行う)
+    let pendingLegacyRoomRaw = null;
+    function migrateLegacyLocalRoomData(rawName, sanitizedName) {
+        if (rawName === sanitizedName) return;
+        try {
+            const newKey = 'territory_save_room_' + sanitizedName;
+            const oldKey = 'territory_save_room_' + rawName;
+            if (!localStorage.getItem(newKey) && localStorage.getItem(oldKey)) {
+                localStorage.setItem(newKey, localStorage.getItem(oldKey));
+            }
+        } catch (e) {}
+    }
+ 
     function getRoomFromUrl() {
         try {
             const params = new URLSearchParams(window.location.search);
@@ -361,7 +377,13 @@
             // 部屋名に「%」を含む場合などに壊れる恐れがあったため削除。
             const room = params.get('room') || params.get('id');
             if (room && room.trim() !== '') {
-                return sanitizeRoomName(room.trim());
+                const raw = room.trim();
+                const sanitized = sanitizeRoomName(raw);
+                if (raw !== sanitized) {
+                    pendingLegacyRoomRaw = raw;
+                    migrateLegacyLocalRoomData(raw, sanitized);
+                }
+                return sanitized;
             }
         } catch (e) {}
         return 'main';
@@ -624,7 +646,13 @@
         redrawPaintLayer();
         render();
  
-        if (currentRoom) {
+        if (pendingLegacyRoomRaw) {
+            const legacyRaw = pendingLegacyRoomRaw;
+            pendingLegacyRoomRaw = null;
+            migrateLegacyCloudRoom(legacyRaw, currentRoom).then(() => {
+                loadFromCloud(false);
+            });
+        } else if (currentRoom) {
             loadFromCloud(false);
         }
     }
@@ -1175,6 +1203,45 @@
     // -------------------------------------------------------------
     const FIREBASE_API_KEY = "AIzaSyCXjs2UBKXildGnrA8BMV3UO6HdKK-LnKg";
  
+    // 部屋名のサニタイズ（例: "OGS/2026/09" → "OGS-2026-09"）で
+    // 参照先が変わってしまった場合に、以前の「記号入りの部屋名」で
+    // クラウドに保存されていたデータを、新しい部屋名へ自動で引き継ぐ。
+    // 新しい部屋名側に既にデータがある場合は何もしない（上書きしない）。
+    async function migrateLegacyCloudRoom(rawName, sanitizedName) {
+        if (!rawName || rawName === sanitizedName) return;
+        try {
+            const newUrl = FIREBASE_REST_BASE + encodeURIComponent(sanitizedName) + '?key=' + FIREBASE_API_KEY;
+            const newRes = await fetch(newUrl);
+            if (newRes.ok) {
+                const newDoc = await newRes.json();
+                if (newDoc.fields && newDoc.fields.str && newDoc.fields.str.stringValue) {
+                    return; // 新しい部屋名側に既にデータがあるため、引き継ぎ不要
+                }
+            }
+ 
+            const oldUrl = FIREBASE_REST_BASE + encodeURIComponent(rawName) + '?key=' + FIREBASE_API_KEY;
+            const oldRes = await fetch(oldUrl);
+            if (!oldRes.ok) return;
+            const oldDoc = await oldRes.json();
+            const strField = oldDoc.fields && oldDoc.fields.str && oldDoc.fields.str.stringValue;
+            if (!strField) return;
+ 
+            await fetch(newUrl, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fields: {
+                        str: { stringValue: strField },
+                        updatedAt: { stringValue: new Date().toISOString() }
+                    }
+                })
+            });
+            showStatus('以前の部屋名「' + rawName + '」にあったクラウドデータを「' + sanitizedName + '」に引き継ぎました！', 'success');
+        } catch (e) {
+            console.warn('旧部屋名からのクラウドデータ引き継ぎに失敗:', e);
+        }
+    }
+ 
     async function saveToCloud() {
         const btn = document.getElementById('btnSaveCloud');
         if (btn) btn.disabled = true;
@@ -1345,7 +1412,8 @@
             const trimmed = next.trim();
             const sanitized = sanitizeRoomName(trimmed);
             if (sanitized !== trimmed) {
-                showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。', 'warning');
+                showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。以前のデータがあれば自動で引き継ぎます。', 'warning');
+                migrateLegacyLocalRoomData(trimmed, sanitized);
             }
             currentRoom = sanitized;
             updateRoomHeaderDisplay();
@@ -1358,7 +1426,11 @@
             redrawPaintLayer();
             updateBoard();
             render();
-            loadFromCloud(true);
+            if (sanitized !== trimmed) {
+                migrateLegacyCloudRoom(trimmed, sanitized).then(() => loadFromCloud(true));
+            } else {
+                loadFromCloud(true);
+            }
         }
     }
  
