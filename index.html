@@ -707,11 +707,29 @@
         render();
     }
 
-    function setPlacementLevel(lv) {
-        activePlacementLevel = lv;
+    // Lv0〜7ボタンのハイライト表示だけを更新する（activePlacementLevelは変えない）。
+    // マス選択時に「今そのマスが何Lvか」を見た目で示すために使う。
+    function highlightLevelButtons(lv) {
         for (let i = 0; i <= 7; i++) {
             const b = document.getElementById('btn-lv-' + i);
             if (b) b.classList.toggle('active', i === lv);
+        }
+    }
+
+    function setPlacementLevel(lv) {
+        activePlacementLevel = lv;
+        highlightLevelButtons(lv);
+        // 座標設定モードで既にマスを選択中の場合、Lvボタンは「次に新規で置くマスの
+        // レベル」だけでなく、選択中の既存マスのレベルもその場で変更する。
+        // これが無いと「既存マスに近すぎて新規作成のつもりが選択扱いになり、
+        // レベルが変わっていなかった」という気づきにくいバグの原因になっていた。
+        if (currentMode === 'edit_node' && selectedNodeIndex !== null && mapMasterData[selectedNodeIndex]) {
+            mapMasterData[selectedNodeIndex].lv = lv;
+            redrawPaintLayer();
+            render();
+            updateBoard();
+            saveLocal();
+            showStatus('選択中のマス #' + (selectedNodeIndex + 1) + ' のレベルをLv' + lv + 'に変更しました。', 'success');
         }
     }
 
@@ -811,6 +829,7 @@
             if (nearestIdx !== -1) {
                 selectedNodeIndex = nearestIdx;
                 isDraggingNode = true;
+                highlightLevelButtons(mapMasterData[nearestIdx].lv);
                 render();
             }
         }
@@ -876,6 +895,7 @@
 
             if (nearestIdx !== -1) {
                 selectedNodeIndex = nearestIdx;
+                highlightLevelButtons(mapMasterData[nearestIdx].lv);
             } else {
                 mapMasterData.push({ x: pctX, y: pctY, lv: activePlacementLevel });
                 selectedNodeIndex = mapMasterData.length - 1;
