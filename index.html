@@ -12,7 +12,7 @@
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Hiragino Sans", sans-serif; margin: 0; background: #090d16; color: #f8fafc; height: 100vh; display: flex; overflow: hidden; user-select: none; }
         .main-wrapper { display: flex; width: 100%; height: 100%; }
         #map-outer { flex: 1; position: relative; overflow: hidden; background: #020617; display: flex; align-items: center; justify-content: center; }
-        #map-container { position: relative; line-height: 0; display: inline-block; }
+        #map-container { position: relative; line-height: 0; display: inline-block; transform-origin: 0 0; touch-action: none; }
         #baseImg { display: block; max-width: 100%; max-height: 100vh; width: auto; height: auto; pointer-events: none; border-radius: 8px; }
         #mapCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: crosshair; touch-action: none; }
         .side-panel { width: var(--panel-width); background: #0f172a; display: flex; flex-direction: column; flex-shrink: 0; border-left: 1px solid #1e293b; z-index: 20; }
@@ -73,6 +73,12 @@
             <img id="baseImg" crossorigin="anonymous" data-default-src="img/image.png" onerror="handleImageError(this)" onload="handleImageLoad(this)">
             <canvas id="mapCanvas"></canvas>
         </div>
+        <div id="zoomHint" style="display:none; position:absolute; bottom:16px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.92); color:#f8fafc; padding:8px 16px; border-radius:20px; font-size:12px; font-weight:bold; pointer-events:none; z-index:30; white-space:nowrap; box-shadow:0 4px 10px rgba(0,0,0,0.5); border:1px solid #334155;">
+            🤏 2本指で移動・つまんで拡大縮小
+        </div>
+        <button id="resetZoomBtn" onclick="resetMapZoom()" style="display:none; position:absolute; top:12px; right:12px; z-index:30; background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);">
+            ↺ 拡大リセット
+        </button>
     </div>
     <div class="side-panel">
         <div class="room-bar">
@@ -304,6 +310,10 @@
     // 対してこの割合を超えて繋がっていたら「漏れた」とみなし、
     // 安全な丸塗りに自動で切り替える。
     const FLOOD_LEAK_RATIO = 0.12;
+    // マスの中心アイコン(星マークなど)がちょうど濃い色で、塗りの起点そのものが
+    // 「壁」判定されてしまうと、バケツ塗りは1ピクセルも塗らずに終わってしまう。
+    // これだと範囲が小さすぎる(0に近い)ので、その場合も丸塗りにフォールバックする。
+    const FLOOD_MIN_PIXELS = 50;
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
 
     // 色ごとの表示名の上書き（例: 「1. 赤 (レッド)」→「○○同盟」）。
@@ -422,6 +432,76 @@
     let selectedNodeIndex = null;
     let isDraggingNode = false;
     let pointerDownPos = null;
+
+    // --- ピンチズーム & 2本指移動 ---
+    let mapScale = 1, mapTranslateX = 0, mapTranslateY = 0;
+    const MAP_MIN_SCALE = 1, MAP_MAX_SCALE = 4;
+    let activePointers = new Map(); // pointerId -> {x, y}（画面上の座標）
+    let isPinching = false;
+    let pinchStartDist = 1, pinchStartScale = 1, pinchStartLocal = { x: 0, y: 0 };
+    let zoomHintTimer = null;
+
+    function applyMapTransform() {
+        const container = document.getElementById('map-container');
+        if (container) {
+            container.style.transform = 'translate(' + mapTranslateX + 'px, ' + mapTranslateY + 'px) scale(' + mapScale + ')';
+        }
+        const resetBtn = document.getElementById('resetZoomBtn');
+        if (resetBtn) resetBtn.style.display = mapScale > 1.01 ? 'block' : 'none';
+    }
+
+    function resetMapZoom() {
+        mapScale = 1;
+        mapTranslateX = 0;
+        mapTranslateY = 0;
+        applyMapTransform();
+    }
+
+    function showZoomHint() {
+        const hint = document.getElementById('zoomHint');
+        if (!hint) return;
+        hint.style.display = 'block';
+        if (zoomHintTimer) clearTimeout(zoomHintTimer);
+        zoomHintTimer = setTimeout(() => { hint.style.display = 'none'; }, 2200);
+    }
+
+    function pointerDist(p1, p2) {
+        return Math.hypot(p1.x - p2.x, p1.y - p2.y);
+    }
+    function pointerMid(p1, p2) {
+        return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    }
+
+    // 現在2本指が置かれているか（ピンチ/2本指移動ジェスチャーの最中か）を
+    // 他のポインタ処理より先に判定するための共通関数。
+    function updatePinchGesture(startingNow) {
+        if (activePointers.size !== 2) return false;
+        const pts = Array.from(activePointers.values());
+        if (startingNow) {
+            isPinching = true;
+            pinchStartDist = Math.max(1, pointerDist(pts[0], pts[1]));
+            pinchStartScale = mapScale;
+            const mid = pointerMid(pts[0], pts[1]);
+            // ジェスチャー開始時点で、画面上の中点がマップのどのローカル座標に
+            // 対応するかを覚えておく。ズーム中もその点が指の下に留まるようにする。
+            pinchStartLocal = {
+                x: (mid.x - mapTranslateX) / mapScale,
+                y: (mid.y - mapTranslateY) / mapScale
+            };
+            showZoomHint();
+            return true;
+        }
+        if (!isPinching) return false;
+        const newDist = Math.max(1, pointerDist(pts[0], pts[1]));
+        const newMid = pointerMid(pts[0], pts[1]);
+        let newScale = pinchStartScale * (newDist / pinchStartDist);
+        newScale = Math.min(MAP_MAX_SCALE, Math.max(MAP_MIN_SCALE, newScale));
+        mapTranslateX = newMid.x - pinchStartLocal.x * newScale;
+        mapTranslateY = newMid.y - pinchStartLocal.y * newScale;
+        mapScale = newScale;
+        applyMapTransform();
+        return true;
+    }
     // 「画像セット」「新しいマップを設定」で読み込んだ背景画像(dataURLまたは外部URL)。
     // null の場合はデフォルトの img/image.png を使う。これが今まで保存対象に
     // 入っておらず、他端末に反映されないバグの原因だった。
@@ -582,18 +662,21 @@
         return count;
     }
 
-    // 1マスぶんを安全に塗る/消す。黒い枠線が無い・途切れているなどの理由で
-    // バケツ塗りが際限なく広がりそうな場合は、意図しない大範囲塗りを防ぐため
-    // 自動的に丸塗り(fillCircle)にフォールバックする。
+    // 1マスぶんを安全に塗る/消す。以下の場合は自動的に丸塗り(fillCircle)に
+    // フォールバックする:
+    // ・黒い枠線が無い/途切れていて、際限なく広がってしまう場合(大きすぎる)
+    // ・マスの中心にある星アイコンなど濃い色に起点そのものが乗ってしまい、
+    //   1ピクセルも塗れずに終わってしまう場合(小さすぎる＝一番外側で発生していた症状)
     function paintCellSafely(point, px, py, color, isErase) {
         if (maskData) {
             const cap = Math.floor(canvas.width * canvas.height * FLOOD_LEAK_RATIO);
             const regionSize = countFloodRegion(px, py, cap);
-            if (regionSize <= cap) {
+            if (regionSize >= FLOOD_MIN_PIXELS && regionSize <= cap) {
                 floodFill(px, py, isErase ? { r: 0, g: 0, b: 0 } : hexToRgb(color), isErase);
                 return;
             }
-            // ここに来たら「漏れ」を検知したということなので、丸塗りにフォールバックする。
+            // ここに来たら「範囲が小さすぎる」か「大きすぎる(漏れ)」ということなので、
+            // 丸塗りにフォールバックする。
         }
         fillCircle(point, isErase ? null : color);
     }
@@ -857,6 +940,16 @@
     // ポインタ操作 (塗りつぶし・座標プロット・ドラッグ)
     // -------------------------------------------------------------
     canvas.addEventListener('pointerdown', (e) => {
+        activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        if (activePointers.size >= 2) {
+            // 2本指以上になったら塗り・ノード編集などの単指操作は行わず、
+            // ピンチズーム/2本指移動ジェスチャーとして扱う。
+            pointerDownPos = null;
+            isDraggingNode = false;
+            if (activePointers.size === 2) updatePinchGesture(true);
+            return;
+        }
+
         pointerDownPos = { x: e.clientX, y: e.clientY };
         isDraggingNode = false;
 
@@ -882,6 +975,14 @@
     });
 
     canvas.addEventListener('pointermove', (e) => {
+        if (activePointers.has(e.pointerId)) {
+            activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+        }
+        if (activePointers.size >= 2) {
+            updatePinchGesture(false);
+            return;
+        }
+
         if (currentMode === 'edit_node' && isDraggingNode && selectedNodeIndex !== null) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
@@ -896,6 +997,19 @@
     });
 
     canvas.addEventListener('pointerup', (e) => {
+        const wasMultiTouch = activePointers.size >= 2;
+        activePointers.delete(e.pointerId);
+        if (activePointers.size < 2) {
+            isPinching = false;
+        }
+        if (wasMultiTouch) {
+            // 2本指ジェスチャー中/直後の指離しでは、単指の塗り・ノード操作を
+            // 誤発動させないためにここで終了する。
+            pointerDownPos = null;
+            isDraggingNode = false;
+            return;
+        }
+
         if (isDraggingNode) {
             isDraggingNode = false;
             redrawPaintLayer();
@@ -965,6 +1079,15 @@
                 applyPaint(nearest, x, y);
             }
         }
+    });
+
+    canvas.addEventListener('pointercancel', (e) => {
+        activePointers.delete(e.pointerId);
+        if (activePointers.size < 2) {
+            isPinching = false;
+        }
+        pointerDownPos = null;
+        isDraggingNode = false;
     });
 
     canvas.addEventListener('contextmenu', (e) => {
