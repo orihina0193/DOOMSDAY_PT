@@ -298,6 +298,12 @@
     // 目安: 130〜150=かなり透ける／160〜180=バランス型／200以上=かなり濃いめ
     const PAINT_ALPHA = 165;
     // ▲▲▲ 色塗りの透過度はここだけ調整すればOK ▲▲▲
+
+    // バケツ塗り(黒い枠線にぶつかるまで広がる仕組み)は、外周など黒フチが
+    // 無い/途切れている場所だと際限なく広がってしまう。マップ全体の面積に
+    // 対してこの割合を超えて繋がっていたら「漏れた」とみなし、
+    // 安全な丸塗りに自動で切り替える。
+    const FLOOD_LEAK_RATIO = 0.12;
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
 
     // 色ごとの表示名の上書き（例: 「1. 赤 (レッド)」→「○○同盟」）。
@@ -548,6 +554,50 @@
         pCtx.putImageData(pImgData, 0, 0);
     }
 
+    // 実際には塗らず、繋がっている範囲(黒い枠線にぶつかるまでの面積)だけを
+    // 先に数える。capを超えた時点で早期に打ち切り、無駄な計算をしない。
+    function countFloodRegion(startX, startY, cap) {
+        const w = canvas.width, h = canvas.height;
+        const visited = new Uint8Array(w * h);
+        const stack = [[startX, startY]];
+        let count = 0;
+        while (stack.length > 0) {
+            const [cx, cy] = stack.pop();
+            if (cx < 0 || cx >= w || cy < 0 || cy >= h) continue;
+            const vIdx = cy * w + cx;
+            if (visited[vIdx]) continue;
+            visited[vIdx] = 1;
+
+            if (maskData) {
+                const idx = vIdx * 4;
+                const mr = maskData[idx], mg = maskData[idx+1], mb = maskData[idx+2];
+                if (mr < 60 && mg < 60 && mb < 60) continue;
+            }
+
+            count++;
+            if (count > cap) return count;
+
+            stack.push([cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]);
+        }
+        return count;
+    }
+
+    // 1マスぶんを安全に塗る/消す。黒い枠線が無い・途切れているなどの理由で
+    // バケツ塗りが際限なく広がりそうな場合は、意図しない大範囲塗りを防ぐため
+    // 自動的に丸塗り(fillCircle)にフォールバックする。
+    function paintCellSafely(point, px, py, color, isErase) {
+        if (maskData) {
+            const cap = Math.floor(canvas.width * canvas.height * FLOOD_LEAK_RATIO);
+            const regionSize = countFloodRegion(px, py, cap);
+            if (regionSize <= cap) {
+                floodFill(px, py, isErase ? { r: 0, g: 0, b: 0 } : hexToRgb(color), isErase);
+                return;
+            }
+            // ここに来たら「漏れ」を検知したということなので、丸塗りにフォールバックする。
+        }
+        fillCircle(point, isErase ? null : color);
+    }
+
     function redrawPaintLayer() {
         pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
         Object.entries(areaStatus).forEach(([key, color]) => {
@@ -555,11 +605,7 @@
             if (!pt) return;
             const px = Math.floor(pt.x * paintCanvas.width / 100);
             const py = Math.floor(pt.y * paintCanvas.height / 100);
-            if (maskData) {
-                floodFill(px, py, hexToRgb(color), false);
-            } else {
-                fillCircle(pt, color);
-            }
+            paintCellSafely(pt, px, py, color, false);
         });
     }
 
@@ -959,14 +1005,11 @@
             }
         }
 
-        const rgb = hexToRgb(selectedColor);
         if (areaStatus[targetKey] && areaStatus[targetKey].toLowerCase() === selectedColor.toLowerCase()) {
-            if (maskData) floodFill(x, y, { r: 0, g: 0, b: 0 }, true);
-            else fillCircle(nearest, null);
+            paintCellSafely(nearest, x, y, null, true);
             delete areaStatus[targetKey];
         } else {
-            if (maskData) floodFill(x, y, rgb, false);
-            else fillCircle(nearest, selectedColor);
+            paintCellSafely(nearest, x, y, selectedColor, false);
             areaStatus[targetKey] = selectedColor;
         }
         saveLocal();
