@@ -1681,10 +1681,38 @@
     }
 
     function savePngImage() {
-        const a = document.createElement('a');
-        a.download = 'territory_' + currentRoom + '_' + Date.now() + '.png';
-        a.href = canvas.toDataURL('image/png');
-        a.click();
+        const fileName = 'territory_' + currentRoom + '_' + Date.now() + '.png';
+
+        // ダウンロードリンク方式（PC / 共有非対応ブラウザ向けフォールバック）
+        function fallbackDownload() {
+            const a = document.createElement('a');
+            a.download = fileName;
+            a.href = canvas.toDataURL('image/png');
+            a.click();
+        }
+
+        // スマホ（iPhone/Android）では OS の共有シートを開き、
+        // 「写真に保存」「画像を保存」を選んでもらう方式にする。
+        // これなら iPhoneはカメラロール、Androidはギャラリーに直接保存できる。
+        canvas.toBlob(function (blob) {
+            if (!blob) { fallbackDownload(); return; }
+
+            const file = new File([blob], fileName, { type: 'image/png' });
+
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                navigator.share({
+                    files: [file],
+                    title: 'マップ画像',
+                }).catch(function (err) {
+                    // ユーザーがキャンセルした場合(AbortError)は何もしない
+                    if (err && err.name === 'AbortError') return;
+                    fallbackDownload();
+                });
+            } else {
+                // Web Share API(ファイル共有)に対応していない端末・ブラウザ
+                fallbackDownload();
+            }
+        }, 'image/png');
     }
 
     function saveLocal() {
