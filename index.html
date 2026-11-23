@@ -17,11 +17,13 @@
         #mapCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; cursor: crosshair; touch-action: none; }
         .side-panel { width: var(--panel-width); background: #0f172a; display: flex; flex-direction: column; flex-shrink: 0; border-left: 1px solid #1e293b; z-index: 20; }
         @media (max-width: 800px) {
-            body { overflow: auto; }
-            .main-wrapper { flex-direction: column; height: auto; min-height: 100vh; }
-            #map-outer { height: 55vh; flex: none; }
-            .side-panel { width: 100%; height: auto; min-height: 45vh; border-left: none; border-top: 1px solid #1e293b; }
-            #score-container { overflow-y: visible !important; }
+            /* ページ全体はスクロールさせず、マップ部分は常に固定表示にする。
+               スクロールが必要な操作パネル＋得点ボードだけを side-panel 自身で
+               スクロールさせることで、地図が画面内で動いてしまうのを防ぐ。 */
+            .main-wrapper { flex-direction: column; height: 100vh; }
+            #map-outer { height: 50vh; flex: none; }
+            .side-panel { display: block; width: 100%; height: 50vh; flex: none; min-height: 0; border-left: none; border-top: 1px solid #1e293b; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            #score-container { flex: none; overflow-y: visible; }
         }
         .room-bar { background: #020617; padding: 8px 12px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; font-size: 12px; gap: 8px; }
         .room-title { font-weight: bold; color: #f59e0b; font-family: monospace; font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -85,85 +87,58 @@
             <div style="display:flex; align-items:center; gap:5px; min-width:0;">
                 <span>🚪</span>
                 <div style="min-width:0;">
-                    <div style="font-size:10px; color:#94a3b8; font-weight:bold;">作戦部屋</div>
+                    <div style="font-size:10px; color:#94a3b8; font-weight:bold;" data-i18n="roomBarLabel">作戦部屋</div>
                     <div id="roomNameDisplay" class="room-title">メイン</div>
                 </div>
             </div>
             <div style="display:flex; gap:4px; flex-shrink:0;">
-                <button class="btn-room" style="background:#2563eb;" onclick="copyRoomLink()" title="ギルメンにURLを共有">🔗 共有</button>
-                <button class="btn-room" style="background:#d97706;" onclick="promptSwitchRoom()" title="別の部屋に移動または新規作成">切替/新規</button>
-                <button class="btn-room" style="background:#4b5563;" onclick="renameCurrentRoom()" title="今表示中のデータを、新しい部屋名でそのまま保存し直します">🏷️ リネーム</button>
+                <button class="btn-room" style="background:#2563eb;" onclick="copyRoomLink()" title="ギルメンにURLを共有" data-i18n="btnShare" data-i18n-title="btnShareTitle">🔗 共有</button>
+                <button class="btn-room" style="background:#d97706;" onclick="promptSwitchRoom()" title="別の部屋に移動または新規作成" data-i18n="btnSwitch" data-i18n-title="btnSwitchTitle">切替/新規</button>
+                <button class="btn-room" style="background:#4b5563;" onclick="renameCurrentRoom()" title="今表示中のデータを、新しい部屋名でそのまま保存し直します" data-i18n="btnRename" data-i18n-title="btnRenameTitle">🏷️ リネーム</button>
+                <button class="btn-room" style="background:#334155;" onclick="toggleLanguage()" id="btnLangToggle" title="表示言語を切り替えます / Switch display language">🌐 EN</button>
             </div>
         </div>
 
         <div class="controls">
             <div id="statusMessage" class="status-msg"></div>
 
-            <!-- 常時表示されるマップ設定＆オールクリア バー -->
-            <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:7px; display:flex; flex-direction:column; gap:6px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:11px; font-weight:bold; color:#cbd5e1;">🗺️ マップ管理</span>
-                    <span id="mapNodeBadge" style="font-size:10px; color:#38bdf8; font-family:monospace; background:#0c4a6e; border:1px solid #0284c7; padding:1px 6px; border-radius:4px; font-weight:bold;">0マス</span>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
-                    <button onclick="setupNewMapPrompt()" style="background:#2563eb; color:white; border:1px solid #3b82f6; padding:7px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="新しいマップを作成して設定する">
-                        <span>➕</span><span>新しいマップを設定</span>
-                    </button>
-                    <button onclick="clearAllMapAndNodes()" style="background:#7f1d1d; color:#fee2e2; border:1px solid #ef4444; padding:7px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="マップ画像と全マス座標・塗りをすべて消去して完全白紙にします">
-                        <span>🗑️</span><span>オールクリア</span>
-                    </button>
-                </div>
-                <button onclick="openPointsModal()" style="background:#451a03; color:#fef3c7; border:1px solid #d97706; padding:6px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="Lv.1〜7の獲得ポイントや勝利目標スコアを設定">
-                    <span>🏆</span><span>マスのレベル別得点 ＆ 目標設定</span>
-                </button>
-                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:4px; font-size:10px; color:#94a3b8;">
-                    <label style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="画像を端末から選択して背景にセット">
-                        <span>📷</span><span>画像セット</span>
-                        <input type="file" accept="image/*" style="display:none;" onchange="handleFileInput(this)">
-                    </label>
-                    <button onclick="restoreDefault160()" style="background:#1e293b; color:#fbbf24; border:1px solid #d97706; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer;">
-                        🔄 160マス復元
-                    </button>
-                </div>
-            </div>
-
             <div class="row-group">
                 <select id="colorSelect" onchange="updateSelectedColor(this.value)"></select>
-                <button class="btn-reset" onclick="renameSelectedColor()" title="選択中の色に同盟名などお好きな名前をつけられます" style="flex:0 0 auto; padding:7px 10px;">✏️名前</button>
-                <button class="btn-reset" onclick="if(confirm('現在のマス塗りをすべてリセットしますか？')) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }">クリア</button>
+                <button class="btn-reset" onclick="renameSelectedColor()" title="選択中の色に同盟名などお好きな名前をつけられます" data-i18n="btnRenameColor" data-i18n-title="btnRenameColorTitle" style="flex:0 0 auto; padding:7px 10px;">✏️名前</button>
+                <button class="btn-reset" onclick="if(confirm(t('confirmClearPaint'))) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }" data-i18n="btnClearPaint">クリア</button>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; background:#020617; padding:4px 8px; border-radius:6px; border:1px solid #334155; font-size:11px;">
-                <span style="color:#94a3b8; font-weight:bold;">🏷️ マス数字:</span>
+                <span style="color:#94a3b8; font-weight:bold;" data-i18n="cellNumberLabel">🏷️ マス数字:</span>
                 <div class="toggle-group" style="width:130px;">
-                    <button id="toggle-badge" class="toggle-btn" onclick="setDisplayMode('badge')">数字</button>
-                    <button id="toggle-hidden" class="toggle-btn active" onclick="setDisplayMode('hidden')">隠す</button>
+                    <button id="toggle-badge" class="toggle-btn" onclick="setDisplayMode('badge')" data-i18n="toggleShow">数字</button>
+                    <button id="toggle-hidden" class="toggle-btn active" onclick="setDisplayMode('hidden')" data-i18n="toggleHide">隠す</button>
                 </div>
             </div>
 
             <div class="mode-group">
                 <button id="mode-paint" class="mode-btn active" onclick="setMode('paint')">
-                    <span>🖌️</span><span>塗り</span>
+                    <span>🖌️</span><span data-i18n="modePaint">塗り</span>
                 </button>
-                <button id="mode-edit_node" class="mode-btn" onclick="setMode('edit_node')" title="マス座標を配置・調整・登録するプロットモード">
-                    <span>📍</span><span>座標設定</span>
+                <button id="mode-edit_node" class="mode-btn" onclick="setMode('edit_node')" title="マス座標を配置・調整・登録するプロットモード" data-i18n-title="modeEditNodeTitle">
+                    <span>📍</span><span data-i18n="modeEditNode">座標設定</span>
                 </button>
                 <button id="mode-start" class="mode-btn" onclick="setMode('start')">
-                    <span>🚩</span><span>出撃</span>
+                    <span>🚩</span><span data-i18n="modeStart">出撃</span>
                 </button>
                 <button id="mode-home" class="mode-btn" onclick="setMode('home')">
-                    <span>🏰</span><span>本拠</span>
+                    <span>🏰</span><span data-i18n="modeHome">本拠</span>
                 </button>
             </div>
 
             <!-- 座標設定ツールパネル -->
             <div id="coordinateEditorBox" class="node-tool-box" style="display:none;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:bold; color:#fda4af;">📍 座標設定ツール (<span id="nodeCountLabel">0</span>マス)</span>
-                    <span style="font-size:10px; color:#f43f5e;">クリックで追加</span>
+                    <span style="font-weight:bold; color:#fda4af;"><span data-i18n="coordToolHeader">📍 座標設定ツール</span> (<span id="nodeCountLabel">0</span><span data-i18n="unitCells">マス</span>)</span>
+                    <span style="font-size:10px; color:#f43f5e;" data-i18n="clickToAdd">クリックで追加</span>
                 </div>
                 <div class="lv-btns">
-                    <button class="lv-btn" onclick="setPlacementLevel(0)" id="btn-lv-0" title="色塗り＆1マスとしてカウントされるが、ポイントは常に0のマス" style="color:#94a3b8;">Lv0</button>
+                    <button class="lv-btn" onclick="setPlacementLevel(0)" id="btn-lv-0" title="色塗り＆1マスとしてカウントされるが、ポイントは常に0のマス" data-i18n-title="lv0Title" style="color:#94a3b8;">Lv0</button>
                     <button class="lv-btn active" onclick="setPlacementLevel(1)" id="btn-lv-1">Lv1</button>
                     <button class="lv-btn" onclick="setPlacementLevel(2)" id="btn-lv-2">Lv2</button>
                     <button class="lv-btn" onclick="setPlacementLevel(3)" id="btn-lv-3">Lv3</button>
@@ -173,27 +148,55 @@
                     <button class="lv-btn" onclick="setPlacementLevel(7)" id="btn-lv-7">Lv7</button>
                 </div>
                 <div class="action-chip-row">
-                    <button class="action-chip" onclick="setupNewMapPrompt()" style="color:#60a5fa;" title="新しいマップを作成・画像と座標を初期化">➕ 新規マップ設定</button>
-                    <button class="action-chip" onclick="copyCoordinatesJson()" title="現在のマス座標配列をJSON形式でコピー">📋 座標JSONコピー</button>
-                    <button class="action-chip" onclick="importCoordinatesPrompt()" title="座標JSONを貼り付けてインポート">📥 JSON読込</button>
-                    <button class="action-chip" onclick="restoreDefault160()" title="160マスの標準座標を復元">🔄 160マス復元</button>
-                    <button class="action-chip" onclick="clearAllNodes()" style="color:#fca5a5;" title="全マス座標のみをクリア">マス座標消去</button>
-                    <button class="action-chip" onclick="clearAllMapAndNodes()" style="color:#f87171; font-weight:bold; background:#450a0a; border-color:#991b1b;" title="マップ画像と全マス座標の両方を消去して完全白紙にする">🗑️ マップと座標の両方を全部消す</button>
+                    <button class="action-chip" onclick="setupNewMapPrompt()" style="color:#60a5fa;" title="新しいマップを作成・画像と座標を初期化" data-i18n="chipNewMap" data-i18n-title="chipNewMapTitle">➕ 新規マップ設定</button>
+                    <button class="action-chip" onclick="copyCoordinatesJson()" title="現在のマス座標配列をJSON形式でコピー" data-i18n="chipCopyJson" data-i18n-title="chipCopyJsonTitle">📋 座標JSONコピー</button>
+                    <button class="action-chip" onclick="importCoordinatesPrompt()" title="座標JSONを貼り付けてインポート" data-i18n="chipImportJson" data-i18n-title="chipImportJsonTitle">📥 JSON読込</button>
+                    <button class="action-chip" onclick="restoreDefault160()" title="160マスの標準座標を復元" data-i18n="chipRestore160" data-i18n-title="chipRestore160Title">🔄 160マス復元</button>
+                    <button class="action-chip" onclick="clearAllNodes()" style="color:#fca5a5;" title="全マス座標のみをクリア" data-i18n="chipClearCoords" data-i18n-title="chipClearCoordsTitle">マス座標消去</button>
+                    <button class="action-chip" onclick="clearAllMapAndNodes()" style="color:#f87171; font-weight:bold; background:#450a0a; border-color:#991b1b;" title="マップ画像と全マス座標の両方を消去して完全白紙にする" data-i18n="chipClearAll" data-i18n-title="chipClearAllTitle">🗑️ マップと座標の両方を全部消す</button>
+                </div>
+            </div>
+
+            <!-- 常時表示されるマップ設定＆オールクリア バー（操作頻度の低いマップ管理系は下に配置） -->
+            <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:7px; display:flex; flex-direction:column; gap:6px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:bold; color:#cbd5e1;" data-i18n="mapMgmtHeader">🗺️ マップ管理</span>
+                    <span id="mapNodeBadge" style="font-size:10px; color:#38bdf8; font-family:monospace; background:#0c4a6e; border:1px solid #0284c7; padding:1px 6px; border-radius:4px; font-weight:bold;">0マス</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
+                    <button onclick="setupNewMapPrompt()" style="background:#2563eb; color:white; border:1px solid #3b82f6; padding:7px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="新しいマップを作成して設定する" data-i18n-title="btnNewMapTitle">
+                        <span>➕</span><span data-i18n="btnNewMap">新しいマップを設定</span>
+                    </button>
+                    <button onclick="clearAllMapAndNodes()" style="background:#7f1d1d; color:#fee2e2; border:1px solid #ef4444; padding:7px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="マップ画像と全マス座標・塗りをすべて消去して完全白紙にします" data-i18n-title="btnAllClearTitle">
+                        <span>🗑️</span><span data-i18n="btnAllClear">オールクリア</span>
+                    </button>
+                </div>
+                <button onclick="openPointsModal()" style="background:#451a03; color:#fef3c7; border:1px solid #d97706; padding:6px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="Lv.1〜7の獲得ポイントや勝利目標スコアを設定" data-i18n-title="btnPointsConfigTitle">
+                    <span>🏆</span><span data-i18n="btnPointsConfig">マスのレベル別得点 ＆ 目標設定</span>
+                </button>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:4px; font-size:10px; color:#94a3b8;">
+                    <label style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="画像を端末から選択して背景にセット" data-i18n-title="btnSetImageTitle">
+                        <span>📷</span><span data-i18n="btnSetImage">画像セット</span>
+                        <input type="file" accept="image/*" style="display:none;" onchange="handleFileInput(this)">
+                    </label>
+                    <button onclick="restoreDefault160()" style="background:#1e293b; color:#fbbf24; border:1px solid #d97706; padding:3px 6px; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="chipRestore160" data-i18n-title="chipRestore160Title" title="160マスの標準座標を復元">
+                        🔄 160マス復元
+                    </button>
                 </div>
             </div>
 
             <!-- クラウド保存＆読込ボタン -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                <button class="btn-cloud-save" onclick="saveToCloud()" id="btnSaveCloud" title="部屋名のデータとしてFirebaseクラウドに保存">
-                    <span>☁️</span><span>クラウド保存</span>
+                <button class="btn-cloud-save" onclick="saveToCloud()" id="btnSaveCloud" title="部屋名のデータとしてFirebaseクラウドに保存" data-i18n-title="btnCloudSaveTitle">
+                    <span>☁️</span><span data-i18n="btnCloudSave">クラウド保存</span>
                 </button>
-                <button class="btn-cloud-fetch" onclick="loadFromCloud(true)" id="btnFetchCloud" title="Firebaseクラウドから最新の戦況を取得">
-                    <span>🔄</span><span>最新取得</span>
+                <button class="btn-cloud-fetch" onclick="loadFromCloud(true)" id="btnFetchCloud" title="Firebaseクラウドから最新の戦況を取得" data-i18n-title="btnCloudFetchTitle">
+                    <span>🔄</span><span data-i18n="btnCloudFetch">最新取得</span>
                 </button>
             </div>
 
             <button class="btn-cloud-fetch" onclick="savePngImage()" style="width:100%;">
-                <span>📸</span><span>マップ画像をPNG保存</span>
+                <span>📸</span><span data-i18n="btnSavePng">マップ画像をPNG保存</span>
             </button>
         </div>
 
@@ -202,8 +205,8 @@
         </div>
 
         <div class="cloud-info-bar">
-            <span>⚡ クラウド連携: Firebase (直接同期)</span>
-            <span>無料・無制限</span>
+            <span data-i18n="cloudInfoText">⚡ クラウド連携: Firebase (直接同期)</span>
+            <span data-i18n="cloudInfoFree">無料・無制限</span>
         </div>
     </div>
 </div>
@@ -213,7 +216,7 @@
     <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:480px; width:100%; color:#f5f5f5; overflow:hidden; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7); font-family:-apple-system,BlinkMacSystemFont,sans-serif;">
         <div style="padding:14px 16px; border-bottom:1px solid #262626; display:flex; justify-content:space-between; align-items:center; background:#0a0a0a;">
             <div style="font-weight:bold; font-size:14px; color:#fbbf24; display:flex; align-items:center; gap:6px;">
-                <span>🏆</span><span>レベル別得点 ＆ 目標ポイント設定</span>
+                <span>🏆</span><span data-i18n="modalHeader">レベル別得点 ＆ 目標ポイント設定</span>
             </div>
             <button onclick="closePointsModal()" style="background:none; border:none; color:#a3a3a3; font-size:16px; cursor:pointer; padding:4px;">✕</button>
         </div>
@@ -221,7 +224,7 @@
             <!-- 目標ポイント -->
             <div style="background:rgba(69,26,3,0.3); border:1px solid rgba(217,119,6,0.5); border-radius:8px; padding:12px; display:flex; flex-direction:column; gap:8px;">
                 <label style="font-weight:bold; color:#fcd34d; display:flex; justify-content:space-between;">
-                    <span>🏁 勝利目標ポイント (Target PTS)</span>
+                    <span data-i18n="targetLabel">🏁 勝利目標ポイント (Target PTS)</span>
                     <span id="modalTotalMapScore" style="color:#f59e0b; font-family:monospace; font-size:11px;"></span>
                 </label>
                 <div style="display:flex; align-items:center; gap:6px;">
@@ -229,21 +232,21 @@
                     <span style="color:#a3a3a3; font-weight:bold;">PTS</span>
                 </div>
                 <div style="display:flex; gap:6px;">
-                    <button type="button" onclick="setTargetPreset(30000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">3万</button>
-                    <button type="button" onclick="setTargetPreset(50000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">5万</button>
-                    <button type="button" onclick="setTargetPreset(80000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">8万</button>
-                    <button type="button" onclick="setTargetPreset(100000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;">10万</button>
+                    <button type="button" onclick="setTargetPreset(30000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="preset30k">3万</button>
+                    <button type="button" onclick="setTargetPreset(50000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="preset50k">5万</button>
+                    <button type="button" onclick="setTargetPreset(80000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="preset80k">8万</button>
+                    <button type="button" onclick="setTargetPreset(100000)" style="padding:3px 8px; background:#262626; border:1px solid #404040; color:#e5e5e5; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="preset100k">10万</button>
                 </div>
             </div>
 
             <!-- Lv別ポイント -->
             <div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <span style="font-weight:bold; color:#e5e5e5;">獲得ポイント (Lv.1〜7)</span>
+                    <span style="font-weight:bold; color:#e5e5e5;" data-i18n="ptsPerLevelLabel">獲得ポイント (Lv.1〜7)</span>
                     <div style="display:flex; gap:4px;">
-                        <button type="button" onclick="applyPointsPreset('standard')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#93c5fd; border-radius:4px; font-size:10px; cursor:pointer;">標準</button>
-                        <button type="button" onclick="applyPointsPreset('high_tier')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#d8b4fe; border-radius:4px; font-size:10px; cursor:pointer;">高Lv重視</button>
-                        <button type="button" onclick="applyPointsPreset('equal')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#cbd5e1; border-radius:4px; font-size:10px; cursor:pointer;">均等</button>
+                        <button type="button" onclick="applyPointsPreset('standard')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#93c5fd; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="presetStandard">標準</button>
+                        <button type="button" onclick="applyPointsPreset('high_tier')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#d8b4fe; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="presetHighTier">高Lv重視</button>
+                        <button type="button" onclick="applyPointsPreset('equal')" style="padding:2px 8px; background:#262626; border:1px solid #404040; color:#cbd5e1; border-radius:4px; font-size:10px; cursor:pointer;" data-i18n="presetEqual">均等</button>
                     </div>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
@@ -276,24 +279,320 @@
                         <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-1" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#fbbf24; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
                     </div>
                     <div style="background:#0a0a0a; border:1px solid #262626; border-radius:6px; padding:8px; grid-column:span 2;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#1e293b; color:#94a3b8; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;">Lv.0（得点なし・カウントのみ）</span><span id="count-lv-0" style="color:#737373; font-size:10px;">0マス</span></div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="background:#1e293b; color:#94a3b8; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px;" data-i18n="lv0BadgeLabel">Lv.0（得点なし・カウントのみ）</span><span id="count-lv-0" style="color:#737373; font-size:10px;">0マス</span></div>
                         <div style="display:flex; align-items:center; gap:4px;"><input type="number" id="input-pt-0" step="50" min="0" style="width:100%; padding:4px 6px; background:#171717; border:1px solid #404040; border-radius:4px; color:#94a3b8; font-family:monospace; font-size:12px; text-align:right;"><span style="color:#737373; font-size:10px;">pt</span></div>
                     </div>
                 </div>
             </div>
         </div>
         <div style="padding:12px 16px; border-top:1px solid #262626; background:#0a0a0a; display:flex; justify-content:flex-end; gap:8px;">
-            <button type="button" onclick="closePointsModal()" style="padding:6px 14px; background:#262626; border:1px solid #404040; color:#d4d4d4; border-radius:6px; font-size:12px; cursor:pointer;">キャンセル</button>
-            <button type="button" onclick="savePointsConfig()" style="padding:6px 16px; background:#2563eb; border:1px solid #3b82f6; color:white; font-weight:bold; border-radius:6px; font-size:12px; cursor:pointer;">設定を保存して適用</button>
+            <button type="button" onclick="closePointsModal()" style="padding:6px 14px; background:#262626; border:1px solid #404040; color:#d4d4d4; border-radius:6px; font-size:12px; cursor:pointer;" data-i18n="btnCancel">キャンセル</button>
+            <button type="button" onclick="savePointsConfig()" style="padding:6px 16px; background:#2563eb; border:1px solid #3b82f6; color:white; font-weight:bold; border-radius:6px; font-size:12px; cursor:pointer;" data-i18n="btnSaveApply">設定を保存して適用</button>
         </div>
     </div>
 </div>
 
 <script>
     // -------------------------------------------------------------
+    // 🌐 多言語対応 (日本語 / English)
+    // -------------------------------------------------------------
+    let uiLang = 'ja';
+    try {
+        const savedLang = localStorage.getItem('territory_ui_lang');
+        if (savedLang === 'en' || savedLang === 'ja') uiLang = savedLang;
+    } catch (e) {}
+
+    const I18N = {
+        ja: {
+            roomBarLabel: '作戦部屋',
+            btnShare: '🔗 共有',
+            btnShareTitle: 'ギルメンにURLを共有',
+            btnSwitch: '切替/新規',
+            btnSwitchTitle: '別の部屋に移動または新規作成',
+            btnRename: '🏷️ リネーム',
+            btnRenameTitle: '今表示中のデータを、新しい部屋名でそのまま保存し直します',
+            roomMain: 'メイン',
+            btnRenameColor: '✏️名前',
+            btnRenameColorTitle: '選択中の色に同盟名などお好きな名前をつけられます',
+            btnClearPaint: 'クリア',
+            confirmClearPaint: '現在のマス塗りをすべてリセットしますか？',
+            cellNumberLabel: '🏷️ マス数字:',
+            toggleShow: '数字',
+            toggleHide: '隠す',
+            modePaint: '塗り',
+            modeEditNode: '座標設定',
+            modeEditNodeTitle: 'マス座標を配置・調整・登録するプロットモード',
+            modeStart: '出撃',
+            modeHome: '本拠',
+            coordToolHeader: '📍 座標設定ツール',
+            unitCells: 'マス',
+            clickToAdd: 'クリックで追加',
+            lv0Title: '色塗り＆1マスとしてカウントされるが、ポイントは常に0のマス',
+            chipNewMap: '➕ 新規マップ設定',
+            chipNewMapTitle: '新しいマップを作成・画像と座標を初期化',
+            chipCopyJson: '📋 座標JSONコピー',
+            chipCopyJsonTitle: '現在のマス座標配列をJSON形式でコピー',
+            chipImportJson: '📥 JSON読込',
+            chipImportJsonTitle: '座標JSONを貼り付けてインポート',
+            chipRestore160: '🔄 160マス復元',
+            chipRestore160Title: '160マスの標準座標を復元',
+            chipClearCoords: 'マス座標消去',
+            chipClearCoordsTitle: '全マス座標のみをクリア',
+            chipClearAll: '🗑️ マップと座標の両方を全部消す',
+            chipClearAllTitle: 'マップ画像と全マス座標の両方を消去して完全白紙にする',
+            mapMgmtHeader: '🗺️ マップ管理',
+            btnNewMap: '新しいマップを設定',
+            btnNewMapTitle: '新しいマップを作成して設定する',
+            btnAllClear: 'オールクリア',
+            btnAllClearTitle: 'マップ画像と全マス座標・塗りをすべて消去して完全白紙にします',
+            btnPointsConfig: 'マスのレベル別得点 ＆ 目標設定',
+            btnPointsConfigTitle: 'Lv.1〜7の獲得ポイントや勝利目標スコアを設定',
+            btnSetImage: '画像セット',
+            btnSetImageTitle: '画像を端末から選択して背景にセット',
+            btnCloudSave: 'クラウド保存',
+            btnCloudSaveTitle: '部屋名のデータとしてFirebaseクラウドに保存',
+            btnCloudFetch: '最新取得',
+            btnCloudFetchTitle: 'Firebaseクラウドから最新の戦況を取得',
+            btnSavePng: 'マップ画像をPNG保存',
+            cloudInfoText: '⚡ クラウド連携: Firebase (直接同期)',
+            cloudInfoFree: '無料・無制限',
+            modalHeader: 'レベル別得点 ＆ 目標ポイント設定',
+            targetLabel: '🏁 勝利目標ポイント (Target PTS)',
+            targetLabelShort: '目標',
+            preset30k: '3万',
+            preset50k: '5万',
+            preset80k: '8万',
+            preset100k: '10万',
+            ptsPerLevelLabel: '獲得ポイント (Lv.1〜7)',
+            presetStandard: '標準',
+            presetHighTier: '高Lv重視',
+            presetEqual: '均等',
+            lv0BadgeLabel: 'Lv.0（得点なし・カウントのみ）',
+            btnCancel: 'キャンセル',
+            btnSaveApply: '設定を保存して適用',
+            mapTotalLabel: 'マップ総計',
+            occupyingPrefix: '占領中:',
+            allianceUnit: '同盟',
+            emptyScoreNotice: 'マスを塗ると、使われている同盟の獲得ポイントがここに表示されます',
+            promptColorName: 'この色（デフォルト名: {name}）につける名前を入力してください。\n空欄で確定するとデフォルト名に戻ります。',
+            msgColorRenamed: 'この色の名前を「{name}」に変更しました！「クラウド保存」を押すと他端末にも反映されます。',
+            msgColorNameReset: 'デフォルトの色名に戻しました。',
+            msgImageLoadFailed: '保存されていたマップ画像の読み込みに失敗したため、デフォルトのマップに戻しました。',
+            msgPointsSaved: 'マスの得点設定を保存・再計算しました！',
+            msgNodeLevelChanged: '選択中のマス #{idx} のレベルをLv{lv}に変更しました。',
+            msgImageSetLarge: '画像をセットしました（約{kb}KB）。サイズが大きいため「クラウド保存」に失敗する可能性があります。',
+            msgImageSet: '端末からマップ画像をセットしました！「クラウド保存」を押すと他端末にも反映されます。',
+            confirmDeleteNode: 'マス #{idx} の座標を削除しますか？',
+            msgCopiedJson: '全{n}マスの座標JSONをクリップボードにコピーしました！',
+            promptCopyJsonFallback: '以下の座標JSONをコピーしてください:',
+            promptImportJson: 'インポートするマス座標JSON配列を貼り付けてください:',
+            msgImportedJson: '{n}マスの座標をインポートしました！',
+            alertInvalidJson: '無効な座標JSON形式です。[{x: 50, y: 50, lv: 1}, ...] の形式にしてください。',
+            alertJsonParseError: 'JSON解析エラー: {err}',
+            confirmRestore160: '標準の160マス座標を復元しますか？現在の座標は上書きされます。',
+            msgRestored160: '標準160マスの座標を復元しました！',
+            confirmClearNodes: 'すべてのマス座標を消去して白紙にしますか？（ゼロから自由に座標を打てます）',
+            msgClearedNodes: '全マス座標をクリアしました。マップ上をクリックして新規座標を配置してください。',
+            confirmClearAll: 'マップ画像とすべてのマス座標の両方を消去して完全な白紙にしますか？',
+            msgClearedAll: 'マップ画像と全マス座標の両方を消去しました。',
+            promptNewMapName: '新しいマップ名を入力してください:',
+            defaultNewMapName: '新規マップ',
+            promptNewMapImgUrl: 'マップ背景画像のURLを入力してください（空欄で白紙マップ）:',
+            msgNewMapSet: '新しいマップ「{name}」を設定しました！座標をプロットしてください。',
+            msgLegacyCloudMigrated: '以前の部屋名「{raw}」にあったクラウドデータを「{sanitized}」に引き継ぎました！',
+            msgSavingCloud: 'Firebaseに部屋「{room}」を保存中...',
+            msgSavedCloud: '部屋「{room}」の作戦データをクラウドに保存しました！',
+            msgSaveError: '保存エラー: {err}',
+            errCommFailed: '通信失敗',
+            msgFetchingCloud: '部屋「{room}」のデータをクラウドから取得中...',
+            msgNoCloudData: '部屋「{room}」の保存データはまだクラウドにありません。',
+            msgSyncedCloud: '部屋「{room}」の最新データをクラウドから同期しました！',
+            msgDecompressFailed: '部屋「{room}」のデータ解凍に失敗しました',
+            msgCommFailedLocalRestored: 'クラウド通信に失敗したため、ローカル保存データを復元しました',
+            promptRenameRoom: 'この部屋（現在の名前: {room}）の新しい名前を入力してください。\n今表示中のデータがそのまま新しい名前で保存されます（元の部屋のデータは残ります）。',
+            msgSameRoomName: '現在と同じ部屋名です。',
+            msgRoomNameSanitized: '部屋名に使えない記号（/ \\ # ?）が含まれていたため「{sanitized}」に置き換えました。',
+            msgRoomRenamed: '部屋名を「{old}」から「{new}」に変更し、今のデータを引っ越しました！（元の部屋のデータはそのまま残っています）',
+            promptSwitchRoomName: '移動・作成する部屋名を入力してください（例: 第1ギルド, 予選A）:',
+            msgRoomNameSanitizedSwitch: '部屋名に使えない記号（/ \\ # ?）が含まれていたため「{sanitized}」に置き換えました。以前のデータがあれば自動で引き継ぎます。',
+            msgShareLinkCopied: '部屋「{room}」の共有URLをコピーしました！',
+            promptShareLinkFallback: '共有リンク:',
+        },
+        en: {
+            roomBarLabel: 'Room',
+            btnShare: '🔗 Share',
+            btnShareTitle: 'Share the URL with guild members',
+            btnSwitch: 'Switch/New',
+            btnSwitchTitle: 'Switch to another room or create a new one',
+            btnRename: '🏷️ Rename',
+            btnRenameTitle: 'Save the data currently shown under a new room name',
+            roomMain: 'Main',
+            btnRenameColor: '✏️ Name',
+            btnRenameColorTitle: 'Give the selected color a custom name, such as an alliance name',
+            btnClearPaint: 'Clear',
+            confirmClearPaint: 'Reset all cell paint?',
+            cellNumberLabel: '🏷️ Cell Numbers:',
+            toggleShow: 'Show',
+            toggleHide: 'Hide',
+            modePaint: 'Paint',
+            modeEditNode: 'Set Coords',
+            modeEditNodeTitle: 'Plot mode: place, adjust, and register cell coordinates',
+            modeStart: 'Deploy',
+            modeHome: 'Home',
+            coordToolHeader: '📍 Coordinate Tool',
+            unitCells: ' cells',
+            clickToAdd: 'Click to add',
+            lv0Title: 'Painted and counted as 1 cell, but always worth 0 points',
+            chipNewMap: '➕ New Map Setup',
+            chipNewMapTitle: 'Create a new map; reset the image and coordinates',
+            chipCopyJson: '📋 Copy Coord JSON',
+            chipCopyJsonTitle: 'Copy the current cell coordinate array as JSON',
+            chipImportJson: '📥 Import JSON',
+            chipImportJsonTitle: 'Paste coordinate JSON to import',
+            chipRestore160: '🔄 Restore 160 Cells',
+            chipRestore160Title: 'Restore the standard 160-cell coordinates',
+            chipClearCoords: 'Clear Coords',
+            chipClearCoordsTitle: 'Clear only the cell coordinates',
+            chipClearAll: '🗑️ Clear Map & Coords',
+            chipClearAllTitle: 'Erase both the map image and all cell coordinates completely',
+            mapMgmtHeader: '🗺️ Map Management',
+            btnNewMap: 'Set New Map',
+            btnNewMapTitle: 'Create and set up a new map',
+            btnAllClear: 'Clear All',
+            btnAllClearTitle: 'Erase the map image and all cell coordinates/paint, fully resetting to blank',
+            btnPointsConfig: 'Level Points & Target Score',
+            btnPointsConfigTitle: 'Set the points earned per level (Lv.1-7) and the target score to win',
+            btnSetImage: 'Set Image',
+            btnSetImageTitle: 'Choose an image from your device to set as the background',
+            btnCloudSave: 'Save to Cloud',
+            btnCloudSaveTitle: "Save this room's data to the Firebase cloud",
+            btnCloudFetch: 'Fetch Latest',
+            btnCloudFetchTitle: 'Get the latest battle state from the Firebase cloud',
+            btnSavePng: 'Save Map as PNG',
+            cloudInfoText: '⚡ Cloud Sync: Firebase (direct)',
+            cloudInfoFree: 'Free & Unlimited',
+            modalHeader: 'Level Points & Target Score Settings',
+            targetLabel: '🏁 Target Score to Win (Target PTS)',
+            targetLabelShort: 'Target',
+            preset30k: '30K',
+            preset50k: '50K',
+            preset80k: '80K',
+            preset100k: '100K',
+            ptsPerLevelLabel: 'Points per Level (Lv.1-7)',
+            presetStandard: 'Standard',
+            presetHighTier: 'High-Lv Focus',
+            presetEqual: 'Equal',
+            lv0BadgeLabel: 'Lv.0 (No points, count only)',
+            btnCancel: 'Cancel',
+            btnSaveApply: 'Save & Apply',
+            mapTotalLabel: 'Map Total',
+            occupyingPrefix: 'Occupying:',
+            allianceUnit: 'alliances',
+            emptyScoreNotice: 'Paint cells to see the scores of alliances currently in play here',
+            promptColorName: 'Enter a name for this color (default name: {name}).\nLeave blank and confirm to reset to the default name.',
+            msgColorRenamed: 'Renamed this color to "{name}"! Press "Save to Cloud" to sync it to other devices.',
+            msgColorNameReset: 'Reset to the default color name.',
+            msgImageLoadFailed: 'Failed to load the saved map image, so it was reverted to the default map.',
+            msgPointsSaved: 'Saved and recalculated the cell point settings!',
+            msgNodeLevelChanged: 'Changed the level of the selected cell #{idx} to Lv{lv}.',
+            msgImageSetLarge: 'Set the image (about {kb}KB). Because it is large, "Save to Cloud" may fail.',
+            msgImageSet: 'Set the map image from this device! Press "Save to Cloud" to sync it to other devices.',
+            confirmDeleteNode: 'Delete the coordinates of cell #{idx}?',
+            msgCopiedJson: 'Copied the coordinate JSON for all {n} cells to the clipboard!',
+            promptCopyJsonFallback: 'Please copy the coordinate JSON below:',
+            promptImportJson: 'Paste the cell coordinate JSON array to import:',
+            msgImportedJson: 'Imported coordinates for {n} cells!',
+            alertInvalidJson: 'Invalid coordinate JSON format. Please use the format [{x: 50, y: 50, lv: 1}, ...].',
+            alertJsonParseError: 'JSON parse error: {err}',
+            confirmRestore160: 'Restore the standard 160-cell coordinates? The current coordinates will be overwritten.',
+            msgRestored160: 'Restored the standard 160-cell coordinates!',
+            confirmClearNodes: 'Clear all cell coordinates and start blank? (You can freely place coordinates from zero)',
+            msgClearedNodes: 'Cleared all cell coordinates. Click on the map to place new coordinates.',
+            confirmClearAll: 'Erase both the map image and all cell coordinates, resetting to completely blank?',
+            msgClearedAll: 'Erased both the map image and all cell coordinates.',
+            promptNewMapName: 'Enter a name for the new map:',
+            defaultNewMapName: 'New Map',
+            promptNewMapImgUrl: 'Enter the URL of the map background image (leave blank for a blank map):',
+            msgNewMapSet: 'Set up new map "{name}"! Please plot the coordinates.',
+            msgLegacyCloudMigrated: 'Carried over cloud data from the previous room name "{raw}" to "{sanitized}"!',
+            msgSavingCloud: 'Saving room "{room}" to Firebase...',
+            msgSavedCloud: 'Saved the battle data for room "{room}" to the cloud!',
+            msgSaveError: 'Save error: {err}',
+            errCommFailed: 'Communication failed',
+            msgFetchingCloud: 'Fetching data for room "{room}" from the cloud...',
+            msgNoCloudData: 'No saved data for room "{room}" in the cloud yet.',
+            msgSyncedCloud: 'Synced the latest data for room "{room}" from the cloud!',
+            msgDecompressFailed: 'Failed to decompress data for room "{room}"',
+            msgCommFailedLocalRestored: 'Cloud communication failed, so the locally saved data was restored',
+            promptRenameRoom: 'Enter a new name for this room (current name: {room}).\nThe currently displayed data will be saved as-is under the new name (the original room\'s data remains untouched).',
+            msgSameRoomName: 'That is the same as the current room name.',
+            msgRoomNameSanitized: 'The room name contained characters that cannot be used (/ \\ # ?), so it was replaced with "{sanitized}".',
+            msgRoomRenamed: 'Renamed the room from "{old}" to "{new}" and moved the current data there! (The original room\'s data remains untouched)',
+            promptSwitchRoomName: 'Enter the room name to switch to or create (e.g. Guild1, QualifierA):',
+            msgRoomNameSanitizedSwitch: 'The room name contained characters that cannot be used (/ \\ # ?), so it was replaced with "{sanitized}". Any previous data will be carried over automatically.',
+            msgShareLinkCopied: 'Copied the share URL for room "{room}"!',
+            promptShareLinkFallback: 'Share link:',
+        }
+    };
+
+    // 翻訳文字列を取得する。{n}のようなプレースホルダはvarsで差し替え可能。
+    // 「Xマス」のような日本語特有の助数詞単位は、英語では「X cells」のように
+    // 前置っぽく返す専用キーをここでまとめて処理する。
+    function t(key, vars) {
+        const dict = I18N[uiLang] || I18N.ja;
+        let str = dict[key] !== undefined ? dict[key] : (I18N.ja[key] !== undefined ? I18N.ja[key] : key);
+        if (vars) {
+            Object.keys(vars).forEach(k => { str = str.split('{' + k + '}').join(vars[k]); });
+        }
+        return str;
+    }
+
+    // 「Xマス」/「X cells」のような、数値＋単位の組み立て専用ヘルパー。
+    function cellsText(n) {
+        return uiLang === 'en' ? (n + ' cell' + (n === 1 ? '' : 's')) : (n + 'マス');
+    }
+    // t()からも使えるように、I18N本体には入れずここで補完する。
+    (function () {
+        const origT = t;
+        window.t = function (key, vars) {
+            if (key === 'cellsCount') return cellsText(vars && vars.n !== undefined ? vars.n : 0);
+            if (key === 'pctAchieved') return uiLang === 'en' ? ((vars.n) + '% achieved') : ((vars.n) + '%達成');
+            return origT(key, vars);
+        };
+    })();
+
+    // data-i18n / data-i18n-title を持つ要素すべてに、現在の言語の文言を適用する。
+    function applyStaticI18n() {
+        document.querySelectorAll('[data-i18n]').forEach(el => {
+            const key = el.getAttribute('data-i18n');
+            el.textContent = t(key);
+        });
+        document.querySelectorAll('[data-i18n-title]').forEach(el => {
+            const key = el.getAttribute('data-i18n-title');
+            el.title = t(key);
+        });
+        const langBtn = document.getElementById('btnLangToggle');
+        if (langBtn) langBtn.textContent = uiLang === 'ja' ? '🌐 EN' : '🌐 JA';
+        document.documentElement.lang = uiLang;
+    }
+
+    // 表示言語を切り替える。設定はlocalStorageに保存し、次回も同じ言語で開く。
+    // 画面全体を再構築し直すのではなく、固定テキストは再適用、数値を含む
+    // 動的テキスト(得点ボードやバッジなど)は各更新関数を呼び直して揃える。
+    function toggleLanguage() {
+        uiLang = uiLang === 'ja' ? 'en' : 'ja';
+        try { localStorage.setItem('territory_ui_lang', uiLang); } catch (e) {}
+        applyStaticI18n();
+        updateRoomHeaderDisplay();
+        if (typeof updateNodeCountLabel === 'function') updateNodeCountLabel();
+        if (typeof updateBoard === 'function') updateBoard();
+        if (typeof refreshColorSelectLabels === 'function') refreshColorSelectLabels();
+    }
+
+    // -------------------------------------------------------------
     // マップ定義・同盟色設定
     // -------------------------------------------------------------
-    let mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
+    let mapMasterData =[{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
     let pointsConfig = {"0":0,"1":100,"2":200,"3":600,"4":2000,"5":3000,"6":4000,"7":6000};
     let targetScore = 50000;
     const colorList = ["#e6194B","#3cb44b","#4363d8","#ffe119","#f58231","#911eb4","#38bdf8","#f032e6","#bfef45","#fabed4","#469990","#dcbeff","#9A6324","#800000","#aaffc3","#808000","#ffd8b1","#000075","#ff7b54","#0891b2","#d97706","#a9a9a9","#be123c","#145a32"];
@@ -315,6 +614,12 @@
     // これだと範囲が小さすぎる(0に近い)ので、その場合も丸塗りにフォールバックする。
     const FLOOD_MIN_PIXELS = 50;
     const colorNames = ["1. 赤 (レッド)","2. 緑 (グリーン)","3. 青 (ブルー)","4. 黄 (イエロー)","5. 橙 (オレンジ)","6. 紫 (パープル)","7. 水色 (スカイ)","8. 桃 (マゼンタ)","9. 黄緑 (ライム)","10. 薄桃 (ピンク)","11. 青緑 (ティール)","12. 藤 (ラベンダー)","13. 茶 (ブラウン)","14. 栗 (マルーン)","15. ミント","16. オリーブ","17. 杏 (アプリコット)","18. 紺 (ネイビー)","19. 珊瑚 (コーラル)","20. シアン","21. 金 (ゴールド)","22. 灰 (グレー)","23. 紅 (クリムゾン)","24. 深緑 (フォレスト)"];
+    const colorNamesEn = ["1. Red","2. Green","3. Blue","4. Yellow","5. Orange","6. Purple","7. Sky Blue","8. Magenta","9. Lime","10. Pink","11. Teal","12. Lavender","13. Brown","14. Maroon","15. Mint","16. Olive","17. Apricot","18. Navy","19. Coral","20. Cyan","21. Gold","22. Gray","23. Crimson","24. Forest Green"];
+
+    // 現在の言語に合わせたデフォルト色名リストを返す。
+    function getColorNamesList() {
+        return uiLang === 'en' ? colorNamesEn : colorNames;
+    }
 
     // 色ごとの表示名の上書き（例: 「1. 赤 (レッド)」→「○○同盟」）。
     // キーはcolorListの色コード、値は入力された任意の名前。
@@ -327,7 +632,7 @@
         const custom = customColorNames[hex];
         if (custom && String(custom).trim()) return String(custom).trim();
         const idx = colorList.indexOf(hex);
-        return idx >= 0 ? colorNames[idx] : hex;
+        return idx >= 0 ? getColorNamesList()[idx] : hex;
     }
 
     // colorSelectの表示テキストを、現在のcustomColorNamesに合わせて更新する。
@@ -343,10 +648,10 @@
     function renameSelectedColor() {
         const defaultLabel = (() => {
             const idx = colorList.indexOf(selectedColor);
-            return idx >= 0 ? colorNames[idx] : selectedColor;
+            return idx >= 0 ? getColorNamesList()[idx] : selectedColor;
         })();
         const current = customColorNames[selectedColor] || '';
-        const input = prompt('この色（デフォルト名: ' + defaultLabel + '）につける名前を入力してください。\n空欄で確定するとデフォルト名に戻ります。', current);
+        const input = prompt(t('promptColorName', { name: defaultLabel }), current);
         if (input === null) return; // キャンセル
         const trimmed = input.trim();
         if (trimmed) {
@@ -358,9 +663,9 @@
         updateBoard();
         saveLocal();
         if (trimmed) {
-            showStatus('この色の名前を「' + trimmed + '」に変更しました！「クラウド保存」を押すと他端末にも反映されます。', 'success');
+            showStatus(t('msgColorRenamed', { name: trimmed }), 'success');
         } else {
-            showStatus('デフォルトの色名に戻しました。', 'success');
+            showStatus(t('msgColorNameReset'), 'success');
         }
     }
 
@@ -417,7 +722,7 @@
     function updateRoomHeaderDisplay() {
         const display = document.getElementById('roomNameDisplay');
         if (display) {
-            display.textContent = currentRoom === 'main' ? 'メイン (main)' : currentRoom;
+            display.textContent = currentRoom === 'main' ? (t('roomMain') + ' (main)') : currentRoom;
         }
     }
 
@@ -525,7 +830,7 @@
             customMapImage = null;
             saveLocal();
             applyMapImageSrc();
-            showStatus('保存されていたマップ画像の読み込みに失敗したため、デフォルトのマップに戻しました。', 'warning');
+            showStatus(t('msgImageLoadFailed'), 'warning');
             return;
         }
         img.style.display = 'none';
@@ -705,7 +1010,7 @@
             totalPts += (pointsConfig[p.lv] !== undefined ? pointsConfig[p.lv] : 100);
         });
         const lblTotal = document.getElementById('modalTotalMapScore');
-        if (lblTotal) lblTotal.textContent = 'マップ総計: ' + totalPts.toLocaleString() + ' pts';
+        if (lblTotal) lblTotal.textContent = t('mapTotalLabel') + ': ' + totalPts.toLocaleString() + ' pts';
 
         for (let lv = 1; lv <= 7; lv++) {
             const input = document.getElementById('input-pt-' + lv);
@@ -713,7 +1018,7 @@
             const cntLbl = document.getElementById('count-lv-' + lv);
             if (cntLbl) {
                 const count = mapMasterData.filter(p => p.lv === lv).length;
-                cntLbl.textContent = count + 'マス';
+                cntLbl.textContent = t('cellsCount', { n: count });
             }
         }
         // Lv0（色塗り＆1マスとしてカウントされるが常に0pt）専用の欄
@@ -722,7 +1027,7 @@
         const cnt0 = document.getElementById('count-lv-0');
         if (cnt0) {
             const count0 = mapMasterData.filter(p => p.lv === 0).length;
-            cnt0.textContent = count0 + 'マス';
+            cnt0.textContent = t('cellsCount', { n: count0 });
         }
     }
 
@@ -772,17 +1077,19 @@
         closePointsModal();
         saveLocal();
         updateBoard();
-        showStatus('マスの得点設定を保存・再計算しました！', 'success');
+        showStatus(t('msgPointsSaved'), 'success');
     }
 
     function initUI() {
+        applyStaticI18n();
+        updateRoomHeaderDisplay();
         colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
         const select = document.getElementById('colorSelect');
         select.innerHTML = '';
         colorList.forEach((color, i) => {
             const opt = document.createElement('option');
             opt.value = color;
-            opt.textContent = colorNames[i];
+            opt.textContent = getColorNamesList()[i];
             select.appendChild(opt);
         });
         updateSelectedColor(colorList[0]);
@@ -858,7 +1165,7 @@
             render();
             updateBoard();
             saveLocal();
-            showStatus('選択中のマス #' + (selectedNodeIndex + 1) + ' のレベルをLv' + lv + 'に変更しました。', 'success');
+            showStatus(t('msgNodeLevelChanged', { idx: (selectedNodeIndex + 1), lv: lv }), 'success');
         }
     }
 
@@ -873,7 +1180,7 @@
         const el = document.getElementById('nodeCountLabel');
         if (el) el.textContent = mapMasterData.length;
         const badge = document.getElementById('mapNodeBadge');
-        if (badge) badge.textContent = mapMasterData.length + 'マス';
+        if (badge) badge.textContent = t('cellsCount', { n: mapMasterData.length });
     }
 
     function handleFileInput(input) {
@@ -887,9 +1194,9 @@
                 saveLocal();
                 const approxKB = Math.round(finalDataUrl.length / 1024);
                 if (finalDataUrl.length > 900000) {
-                    showStatus('画像をセットしました（約' + approxKB + 'KB）。サイズが大きいため「クラウド保存」に失敗する可能性があります。', 'warning');
+                    showStatus(t('msgImageSetLarge', { kb: approxKB }), 'warning');
                 } else {
-                    showStatus('端末からマップ画像をセットしました！「クラウド保存」を押すと他端末にも反映されます。', 'success');
+                    showStatus(t('msgImageSet'), 'success');
                 }
             });
         };
@@ -1103,7 +1410,7 @@
                 if (d < minD) { minD = d; nearestIdx = idx; }
             });
             if (nearestIdx !== -1) {
-                if (confirm('マス #' + (nearestIdx + 1) + ' の座標を削除しますか？')) {
+                if (confirm(t('confirmDeleteNode', { idx: (nearestIdx + 1) }))) {
                     mapMasterData.splice(nearestIdx, 1);
                     selectedNodeIndex = null;
                     updateNodeCountLabel();
@@ -1224,14 +1531,14 @@
     function copyCoordinatesJson() {
         const json = JSON.stringify(mapMasterData, null, 2);
         navigator.clipboard.writeText(json).then(() => {
-            showStatus('全' + mapMasterData.length + 'マスの座標JSONをクリップボードにコピーしました！', 'success');
+            showStatus(t('msgCopiedJson', { n: mapMasterData.length }), 'success');
         }).catch(() => {
-            prompt('以下の座標JSONをコピーしてください:', json);
+            prompt(t('promptCopyJsonFallback'), json);
         });
     }
 
     function importCoordinatesPrompt() {
-        const input = prompt('インポートするマス座標JSON配列を貼り付けてください:');
+        const input = prompt(t('promptImportJson'));
         if (!input) return;
         try {
             const parsed = JSON.parse(input);
@@ -1242,29 +1549,29 @@
                 redrawPaintLayer();
                 render();
                 saveLocal();
-                showStatus(mapMasterData.length + 'マスの座標をインポートしました！', 'success');
+                showStatus(t('msgImportedJson', { n: mapMasterData.length }), 'success');
             } else {
-                alert('無効な座標JSON形式です。[{x: 50, y: 50, lv: 1}, ...] の形式にしてください。');
+                alert(t('alertInvalidJson'));
             }
         } catch (e) {
-            alert('JSON解析エラー: ' + e.message);
+            alert(t('alertJsonParseError', { err: e.message }));
         }
     }
 
     function restoreDefault160() {
-        if (confirm('標準の160マス座標を復元しますか？現在の座標は上書きされます。')) {
+        if (confirm(t('confirmRestore160'))) {
             mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
             updateNodeCountLabel();
             selectedNodeIndex = null;
             redrawPaintLayer();
             render();
             saveLocal();
-            showStatus('標準160マスの座標を復元しました！', 'success');
+            showStatus(t('msgRestored160'), 'success');
         }
     }
 
     function clearAllNodes() {
-        if (confirm('すべてのマス座標を消去して白紙にしますか？（ゼロから自由に座標を打てます）')) {
+        if (confirm(t('confirmClearNodes'))) {
             mapMasterData = [];
             areaStatus = {};
             selectedNodeIndex = null;
@@ -1273,12 +1580,12 @@
             render();
             updateBoard();
             saveLocal();
-            showStatus('全マス座標をクリアしました。マップ上をクリックして新規座標を配置してください。', 'success');
+            showStatus(t('msgClearedNodes'), 'success');
         }
     }
 
     function clearAllMapAndNodes() {
-        if (confirm('マップ画像とすべてのマス座標の両方を消去して完全な白紙にしますか？')) {
+        if (confirm(t('confirmClearAll'))) {
             mapMasterData = [];
             areaStatus = {};
             startPositions = [];
@@ -1295,14 +1602,14 @@
             render();
             updateBoard();
             saveLocal();
-            showStatus('マップ画像と全マス座標の両方を消去しました。', 'success');
+            showStatus(t('msgClearedAll'), 'success');
         }
     }
 
     function setupNewMapPrompt() {
-        const name = prompt('新しいマップ名を入力してください:', '新規マップ');
+        const name = prompt(t('promptNewMapName'), t('defaultNewMapName'));
         if (!name) return;
-        const imgUrl = prompt('マップ背景画像のURLを入力してください（空欄で白紙マップ）:', '');
+        const imgUrl = prompt(t('promptNewMapImgUrl'), '');
         if (imgUrl !== null) {
             const base = document.getElementById('baseImg');
             const trimmedUrl = imgUrl.trim();
@@ -1326,7 +1633,7 @@
             render();
             updateBoard();
             saveLocal();
-            showStatus('新しいマップ「' + name + '」を設定しました！座標をプロットしてください。', 'success');
+            showStatus(t('msgNewMapSet', { name: name }), 'success');
         }
     }
 
@@ -1365,13 +1672,13 @@
 
         const summaryHeader = document.createElement('div');
         summaryHeader.style.cssText = 'padding: 6px 4px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; margin-bottom: 6px;';
-        summaryHeader.innerHTML = '<span>占領中: <strong style="color:#fbbf24;">' + activeList.length + '</strong> 同盟 (' + totalOccupied + 'マス)</span><span style="font-size:10px; color:#fbbf24; background:rgba(217, 119, 6, 0.2); border:1px solid rgba(217, 119, 6, 0.4); padding:1px 5px; border-radius:4px; font-weight:bold;">目標: ' + (targetScore || 50000).toLocaleString() + 'pt</span>';
+        summaryHeader.innerHTML = '<span>' + t('occupyingPrefix') + ' <strong style="color:#fbbf24;">' + activeList.length + '</strong> ' + t('allianceUnit') + ' (' + t('cellsCount', { n: totalOccupied }) + ')</span><span style="font-size:10px; color:#fbbf24; background:rgba(217, 119, 6, 0.2); border:1px solid rgba(217, 119, 6, 0.4); padding:1px 5px; border-radius:4px; font-weight:bold;">' + t('targetLabelShort') + ': ' + (targetScore || 50000).toLocaleString() + 'pt</span>';
         container.appendChild(summaryHeader);
 
         if (activeList.length === 0) {
             const emptyNotice = document.createElement('div');
             emptyNotice.style.cssText = 'padding: 24px 12px; text-align: center; color: #64748b; font-size: 11px; line-height: 1.6;';
-            emptyNotice.innerHTML = '<div style="font-size: 24px; margin-bottom: 8px;">🗺️</div><div>マスを塗ると、使われている同盟の獲得ポイントがここに表示されます</div>';
+            emptyNotice.innerHTML = '<div style="font-size: 24px; margin-bottom: 8px;">🗺️</div><div>' + t('emptyScoreNotice') + '</div>';
             container.appendChild(emptyNotice);
             return;
         }
@@ -1387,15 +1694,15 @@
                 card.style.background = '#283548';
             }
             card.onclick = () => updateSelectedColor(item.hex);
-            card.innerHTML = 
+            card.innerHTML =
                 '<div class="score-info">' +
                     '<div style="display:flex; align-items:center; gap:4px;">' +
                         '<span style="color:#94a3b8; font-size:10px; font-weight:bold;">#' + (rank + 1) + '</span>' +
                         '<span>' + item.name + '</span>' +
                     '</div>' +
                     '<div style="font-size:10px; color:#64748b; font-weight:normal; display:flex; gap:6px; margin-top:2px;">' +
-                        '<span>' + item.count + 'マス</span>' +
-                        '<span style="color:#f59e0b;">' + pct + '%達成</span>' +
+                        '<span>' + t('cellsCount', { n: item.count }) + '</span>' +
+                        '<span style="color:#f59e0b;">' + t('pctAchieved', { n: pct }) + '</span>' +
                     '</div>' +
                 '</div>' +
                 '<div class="score-val">' + item.score.toLocaleString() + '<span style="font-size:10px; color:#94a3b8; margin-left:2px;">pts</span></div>';
@@ -1441,7 +1748,7 @@
                     }
                 })
             });
-            showStatus('以前の部屋名「' + rawName + '」にあったクラウドデータを「' + sanitizedName + '」に引き継ぎました！', 'success');
+            showStatus(t('msgLegacyCloudMigrated', { raw: rawName, sanitized: sanitizedName }), 'success');
         } catch (e) {
             console.warn('旧部屋名からのクラウドデータ引き継ぎに失敗:', e);
         }
@@ -1450,7 +1757,7 @@
     async function saveToCloud() {
         const btn = document.getElementById('btnSaveCloud');
         if (btn) btn.disabled = true;
-        showStatus('Firebaseに部屋「' + currentRoom + '」を保存中...', 'loading');
+        showStatus(t('msgSavingCloud', { room: currentRoom }), 'loading');
 
         const fullData = {
             roomName: currentRoom,
@@ -1494,10 +1801,10 @@
             });
 
             if (!res.ok) throw new Error('HTTP ' + res.status);
-            showStatus('部屋「' + currentRoom + '」の作戦データをクラウドに保存しました！', 'success');
+            showStatus(t('msgSavedCloud', { room: currentRoom }), 'success');
         } catch (err) {
             console.error(err);
-            showStatus('保存エラー: ' + (err.message || '通信失敗'), 'error');
+            showStatus(t('msgSaveError', { err: (err.message || t('errCommFailed')) }), 'error');
         } finally {
             if (btn) btn.disabled = false;
         }
@@ -1507,7 +1814,7 @@
         const btn = document.getElementById('btnFetchCloud');
         if (btn && isManual) btn.disabled = true;
         if (isManual) {
-            showStatus('部屋「' + currentRoom + '」のデータをクラウドから取得中...', 'loading');
+            showStatus(t('msgFetchingCloud', { room: currentRoom }), 'loading');
         }
 
         try {
@@ -1515,7 +1822,7 @@
             const res = await fetch(docUrl);
             if (res.status === 404) {
                 if (isManual) {
-                    showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
+                    showStatus(t('msgNoCloudData', { room: currentRoom }), 'warning');
                 }
                 loadLocal();
                 redrawPaintLayer();
@@ -1531,7 +1838,7 @@
 
             if (!text) {
                 if (isManual) {
-                    showStatus('部屋「' + currentRoom + '」の保存データはまだクラウドにありません。', 'warning');
+                    showStatus(t('msgNoCloudData', { room: currentRoom }), 'warning');
                 }
                 loadLocal();
                 redrawPaintLayer();
@@ -1592,10 +1899,10 @@
                 updateBoard();
                 render();
                 if (isManual) {
-                    showStatus('部屋「' + currentRoom + '」の最新データをクラウドから同期しました！', 'success');
+                    showStatus(t('msgSyncedCloud', { room: currentRoom }), 'success');
                 }
             } else if (isManual) {
-                showStatus('部屋「' + currentRoom + '」のデータ解凍に失敗しました', 'error');
+                showStatus(t('msgDecompressFailed', { room: currentRoom }), 'error');
             }
         } catch (err) {
             console.error(err);
@@ -1604,7 +1911,7 @@
             updateBoard();
             render();
             if (isManual) {
-                showStatus('クラウド通信に失敗したため、ローカル保存データを復元しました', 'warning');
+                showStatus(t('msgCommFailedLocalRestored'), 'warning');
             }
         } finally {
             if (btn) btn.disabled = false;
@@ -1617,17 +1924,17 @@
     // として確実に新しい名前に移せるようにするための機能。
     // 元の部屋名のデータは削除せずそのまま残す。
     async function renameCurrentRoom() {
-        const input = prompt('この部屋（現在の名前: ' + currentRoom + '）の新しい名前を入力してください。\n今表示中のデータがそのまま新しい名前で保存されます（元の部屋のデータは残ります）。', currentRoom);
+        const input = prompt(t('promptRenameRoom', { room: currentRoom }), currentRoom);
         if (input === null) return;
         const trimmed = input.trim();
         if (!trimmed) return;
         const sanitized = sanitizeRoomName(trimmed);
         if (sanitized === currentRoom) {
-            showStatus('現在と同じ部屋名です。', 'warning');
+            showStatus(t('msgSameRoomName'), 'warning');
             return;
         }
         if (sanitized !== trimmed) {
-            showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。', 'warning');
+            showStatus(t('msgRoomNameSanitized', { sanitized: sanitized }), 'warning');
         }
         const oldRoom = currentRoom;
         currentRoom = sanitized;
@@ -1639,16 +1946,16 @@
         } catch (e) {}
         saveLocal();
         await saveToCloud();
-        showStatus('部屋名を「' + oldRoom + '」から「' + currentRoom + '」に変更し、今のデータを引っ越しました！（元の部屋のデータはそのまま残っています）', 'success');
+        showStatus(t('msgRoomRenamed', { old: oldRoom, new: currentRoom }), 'success');
     }
 
     function promptSwitchRoom() {
-        const next = prompt('移動・作成する部屋名を入力してください（例: 第1ギルド, 予選A）:', currentRoom);
+        const next = prompt(t('promptSwitchRoomName'), currentRoom);
         if (next && next.trim() !== '') {
             const trimmed = next.trim();
             const sanitized = sanitizeRoomName(trimmed);
             if (sanitized !== trimmed) {
-                showStatus('部屋名に使えない記号（/ \\ # ?）が含まれていたため「' + sanitized + '」に置き換えました。以前のデータがあれば自動で引き継ぎます。', 'warning');
+                showStatus(t('msgRoomNameSanitizedSwitch', { sanitized: sanitized }), 'warning');
                 migrateLegacyLocalRoomData(trimmed, sanitized);
             }
             currentRoom = sanitized;
@@ -1674,9 +1981,9 @@
         const url = new URL(window.location.href);
         url.searchParams.set('room', currentRoom);
         navigator.clipboard.writeText(url.toString()).then(() => {
-            showStatus('部屋「' + currentRoom + '」の共有URLをコピーしました！', 'success');
+            showStatus(t('msgShareLinkCopied', { room: currentRoom }), 'success');
         }).catch(() => {
-            prompt('共有リンク:', url.toString());
+            prompt(t('promptShareLinkFallback'), url.toString());
         });
     }
 
