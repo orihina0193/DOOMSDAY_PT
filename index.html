@@ -30,6 +30,11 @@
             .tab-pane.controls { overflow: visible; }
             #score-container { flex: none; overflow-y: visible; }
         }
+        /* PC表示: パネル幅が狭いので、部屋名を1段上にしてボタンは下の段に並べる */
+        @media (min-width: 801px) {
+            .room-bar { flex-direction: column; align-items: stretch; gap: 6px; }
+            .room-bar > div:last-child { flex-wrap: wrap; }
+        }
         .room-bar { background: #020617; padding: 8px 12px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; font-size: 12px; gap: 8px; }
         .room-title { font-weight: bold; color: #f59e0b; font-family: monospace; font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .btn-room { background: #2563eb; color: white; border: none; padding: 5px 8px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 4px; }
