@@ -23,6 +23,8 @@
             .main-wrapper { flex-direction: column; height: 100vh; }
             #map-outer { height: 50vh; flex: none; }
             .side-panel { display: block; width: 100%; height: 50vh; flex: none; min-height: 0; border-left: none; border-top: 1px solid #1e293b; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+            .panel-head { position: sticky; top: 0; }
+            .tab-pane.controls { overflow: visible; }
             #score-container { flex: none; overflow-y: visible; }
         }
         .room-bar { background: #020617; padding: 8px 12px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; font-size: 12px; gap: 8px; }
@@ -31,7 +33,7 @@
         .btn-room:hover { background: #1d4ed8; }
         .controls { padding: 10px 12px; border-bottom: 1px solid #1e293b; background: #0f172a; display: flex; flex-direction: column; gap: 8px; }
         .row-group { display: flex; gap: 6px; align-items: center; }
-        .mode-group { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; }
+        .mode-group { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
         .toggle-group { display: flex; background: #020617; border: 1px solid #334155; border-radius: 6px; padding: 2px; }
         .toggle-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 4px 6px; font-size: 11px; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .toggle-btn.active { background: #2563eb; color: white; }
@@ -44,7 +46,12 @@
         .btn-cloud-fetch { background: #1e293b; color: #e2e8f0; border: 1px solid #334155; padding: 7px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; gap: 4px; }
         .btn-cloud-fetch:hover { background: #334155; }
         .btn-reset { background: #334155; color: #f1f5f9; border: 1px solid #475569; padding: 7px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; height: 36px; }
-        .status-msg { font-size: 11px; padding: 6px 8px; border-radius: 6px; text-align: center; font-weight: bold; display: none; }
+        .status-msg { font-size: 11px; padding: 8px 12px; border-radius: 8px; text-align: center; font-weight: bold; display: none; position: fixed; left: 50%; transform: translateX(-50%); bottom: 14px; z-index: 10001; max-width: 92vw; box-shadow: 0 6px 16px rgba(0,0,0,0.6); pointer-events: none; }
+        #statusMessage.status-success { background: #064e3b; }
+        #statusMessage.status-loading { background: #1e3a8a; }
+        #statusMessage.status-error { background: #7f1d1d; }
+        #statusMessage.status-warning { background: #78350f; }
+        input, select, textarea { -webkit-user-select: text; user-select: text; }
         .status-success { background: rgba(5, 150, 105, 0.2); color: #34d399; border: 1px solid #059669; }
         .status-loading { background: rgba(37, 99, 235, 0.2); color: #60a5fa; border: 1px solid #2563eb; }
         .status-error { background: rgba(225, 29, 72, 0.2); color: #fb7185; border: 1px solid #e11d48; }
@@ -57,6 +64,28 @@
         .score-val { font-size: 15px; font-weight: 800; color: #fbbf24; text-align: right; font-family: monospace; }
         .cloud-info-bar { font-size: 10px; color: #10b981; padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #1e293b; background: #020617; }
         
+        /* 操作ヘッダー（現状/予定の切替・保存/取得・タブ） */
+        .panel-head { background: #0b1220; border-bottom: 1px solid #1e293b; z-index: 15; padding: 8px 10px 0; display: flex; flex-direction: column; gap: 6px; }
+        .head-row { display: flex; align-items: center; gap: 6px; }
+        .seg { display: flex; flex: 1; min-width: 0; background: #020617; border: 1px solid #334155; border-radius: 8px; padding: 2px; }
+        .seg-btn { flex: 1; background: transparent; color: #94a3b8; border: none; padding: 7px 4px; font-size: 12px; font-weight: bold; cursor: pointer; border-radius: 6px; white-space: nowrap; }
+        .seg-btn.active { background: #2563eb; color: #fff; }
+        .seg-btn.plan-active { background: #d97706; color: #fff; }
+        #planSelect { flex: 1.3; min-width: 0; max-width: 150px; background: #1e293b; color: #f8fafc; border: 1px solid #d97706; border-radius: 8px; padding: 6px 4px; font-size: 11px; font-weight: bold; height: 34px; }
+        .icon-btn { flex: 0 0 auto; width: 36px; height: 34px; background: #1e293b; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px; font-size: 15px; cursor: pointer; padding: 0; }
+        .icon-btn.primary { background: linear-gradient(135deg, #059669, #0d9488); border: none; color: #fff; }
+        .icon-btn:disabled { opacity: 0.5; }
+        .tab-bar { display: flex; gap: 2px; }
+        .tab-btn { flex: 1; background: transparent; color: #94a3b8; border: none; border-bottom: 3px solid transparent; padding: 7px 2px 8px; font-size: 12px; font-weight: bold; cursor: pointer; }
+        .tab-btn.active { color: #f8fafc; border-bottom-color: #3b82f6; }
+        .tab-pane { display: block; }
+        .tab-pane:not(.active) { display: none !important; }
+        .tab-pane.controls { display: flex; flex: 1; min-height: 0; overflow-y: auto; border-bottom: none; }
+        #tab-score { flex: 1; min-height: 0; overflow-y: auto; background: #090d16; }
+        .admin-box { background: #090d16; border: 1px solid #334155; border-radius: 8px; padding: 7px; display: flex; flex-direction: column; gap: 6px; }
+        .mini-badge { font-size: 10px; color: #38bdf8; font-family: monospace; background: #0c4a6e; border: 1px solid #0284c7; padding: 1px 6px; border-radius: 4px; font-weight: bold; }
+        .plan-chip { color: #fde68a; border-color: #92400e; padding: 6px 8px; font-size: 11px; }
+
         /* 座標設定パネル */
         .node-tool-box { background: rgba(159, 18, 57, 0.25); border: 1px solid #be123c; border-radius: 6px; padding: 8px; display: flex; flex-direction: column; gap: 6px; font-size: 11px; }
         .lv-btns { display: flex; gap: 3px; }
@@ -81,6 +110,10 @@
         <button id="resetZoomBtn" onclick="resetMapZoom()" style="display:none; position:absolute; top:12px; right:12px; z-index:30; background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:6px 10px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.4);">
             ↺ 拡大リセット
         </button>
+        <div id="viewBanner" style="display:none; position:absolute; top:8px; left:8px; z-index:30; max-width:calc(100% - 110px); align-items:center; gap:6px; flex-wrap:wrap; background:rgba(15,23,42,0.92); color:#f8fafc; padding:5px 10px; border-radius:16px; font-size:11px; font-weight:bold; border:1px solid #334155; box-shadow:0 2px 6px rgba(0,0,0,0.4);">
+            <span id="viewBannerText"></span>
+            <button id="viewBannerBtn" onclick="openUnlockModal()" style="display:none; background:#2563eb; color:#fff; border:none; border-radius:10px; padding:2px 8px; font-size:10px; font-weight:bold; cursor:pointer;" data-i18n="btnAdminLogin">🔑 管理者</button>
+        </div>
     </div>
     <div class="side-panel">
         <div class="room-bar">
@@ -99,13 +132,30 @@
             </div>
         </div>
 
-        <div class="controls">
-            <div id="statusMessage" class="status-msg"></div>
+        <!-- 常に見える操作ヘッダー：現状/予定の切替・保存/取得・タブ -->
+        <div class="panel-head">
+            <div class="head-row">
+                <div class="seg">
+                    <button id="viewBtnCurrent" class="seg-btn active" onclick="setViewMode('current')" data-i18n="viewCurrent">📍 現状</button>
+                    <button id="viewBtnPlan" class="seg-btn" onclick="setViewMode('plan')" data-i18n="viewPlan">🎯 予定・案</button>
+                </div>
+                <select id="planSelect" onchange="onPlanSelectChange(this.value)" style="display:none;"></select>
+                <button class="icon-btn" id="btnFetchCloud" onclick="fetchCurrentView()" title="最新を取得" data-i18n-title="btnCloudFetchTitle">🔄</button>
+                <button class="icon-btn primary" id="btnSaveCloud" onclick="saveCurrentView()" title="クラウドに保存" data-i18n-title="btnCloudSaveTitle">☁️</button>
+            </div>
+            <div class="tab-bar">
+                <button id="tabBtn-paint" class="tab-btn active" onclick="setTab('paint')" data-i18n="tabPaint">🖌️ 塗る</button>
+                <button id="tabBtn-score" class="tab-btn" onclick="setTab('score')" data-i18n="tabScore">📊 得点</button>
+                <button id="tabBtn-admin" class="tab-btn" onclick="setTab('admin')"><span data-i18n="tabAdmin">⚙️ 管理</span> <span id="adminLockIcon"></span></button>
+            </div>
+        </div>
 
+        <!-- ① 塗るタブ：みんなが使う操作 -->
+        <div id="tab-paint" class="tab-pane controls active">
             <div class="row-group">
                 <select id="colorSelect" onchange="updateSelectedColor(this.value)"></select>
                 <button class="btn-reset" onclick="renameSelectedColor()" title="選択中の色に同盟名などお好きな名前をつけられます" data-i18n="btnRenameColor" data-i18n-title="btnRenameColorTitle" style="flex:0 0 auto; padding:7px 10px;">✏️名前</button>
-                <button class="btn-reset" onclick="if(confirm(t('confirmClearPaint'))) { areaStatus={}; startPositions=[]; homePos=null; redrawPaintLayer(); render(); updateBoard(); saveLocal(); }" data-i18n="btnClearPaint">クリア</button>
+                <button class="btn-reset" onclick="clearViewPaint()" data-i18n="btnClearPaint">クリア</button>
             </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; background:#020617; padding:4px 8px; border-radius:6px; border:1px solid #334155; font-size:11px;">
@@ -120,9 +170,6 @@
                 <button id="mode-paint" class="mode-btn active" onclick="setMode('paint')">
                     <span>🖌️</span><span data-i18n="modePaint">塗り</span>
                 </button>
-                <button id="mode-edit_node" class="mode-btn" onclick="setMode('edit_node')" title="マス座標を配置・調整・登録するプロットモード" data-i18n-title="modeEditNodeTitle">
-                    <span>📍</span><span data-i18n="modeEditNode">座標設定</span>
-                </button>
                 <button id="mode-start" class="mode-btn" onclick="setMode('start')">
                     <span>🚩</span><span data-i18n="modeStart">出撃</span>
                 </button>
@@ -130,6 +177,54 @@
                     <span>🏰</span><span data-i18n="modeHome">本拠</span>
                 </button>
             </div>
+
+            <!-- 予定・案を見ている時だけ出る操作 -->
+            <div id="planActions" style="display:none; gap:6px; flex-wrap:wrap;">
+                <button class="action-chip plan-chip" onclick="createPlanPrompt()" data-i18n="planActCreate">💡 案を作る</button>
+                <button class="action-chip plan-chip" id="btnDeletePlan" onclick="deleteActivePlan()" data-i18n="planActDelete">🗑️ この案を削除</button>
+                <button class="action-chip plan-chip" id="btnPromotePlan" onclick="promoteActivePlan()" data-i18n="planActPromote">📌 予定にする</button>
+            </div>
+
+            <button class="btn-cloud-fetch" onclick="savePngImage()" style="width:100%;">
+                <span>📸</span><span data-i18n="btnSavePng">マップ画像をPNG保存</span>
+            </button>
+        </div>
+
+        <!-- ② 得点タブ -->
+        <div id="tab-score" class="tab-pane">
+            <div id="score-container">
+                <div id="score-board" class="score-list"></div>
+            </div>
+        </div>
+
+        <!-- ③ 管理タブ：マップを用意する・拠点レベルを決める人（アビー）用 -->
+        <div id="tab-admin" class="tab-pane controls">
+            <!-- 合言葉（現状の編集ロック） -->
+            <div class="admin-box">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:11px; font-weight:bold; color:#cbd5e1;" data-i18n="adminLockHeader">🔐 合言葉（現状の編集ロック）</span>
+                    <span id="adminLockBadge" class="mini-badge"></span>
+                </div>
+                <div id="adminLockStatus" style="font-size:10px; color:#94a3b8; line-height:1.5;"></div>
+                <div class="action-chip-row">
+                    <button class="action-chip" onclick="openSetPinModal()" data-i18n="btnSetPin">🔑 合言葉を設定/変更</button>
+                    <button class="action-chip" onclick="removeAdminPin()" data-i18n="btnRemovePin">🔓 合言葉をなくす</button>
+                    <button class="action-chip" onclick="lockThisDevice()" data-i18n="btnLockNow">🔒 この端末をロック</button>
+                </div>
+            </div>
+
+            <!-- 予定の運用 -->
+            <div class="admin-box">
+                <span style="font-size:11px; font-weight:bold; color:#cbd5e1;" data-i18n="planAdminHeader">🎯 予定の運用</span>
+                <div class="action-chip-row">
+                    <button class="action-chip" style="color:#86efac;" onclick="applyPlanToCurrent()" data-i18n="btnApplyPlan">✅ 予定を現状に反映</button>
+                    <button class="action-chip" style="color:#fca5a5;" onclick="clearMainPlan()" data-i18n="btnClearMainPlan">🧹 予定を空にする</button>
+                </div>
+            </div>
+
+            <button id="mode-edit_node" class="mode-btn" onclick="setMode('edit_node')" title="マス座標を配置・調整・登録するプロットモード" data-i18n-title="modeEditNodeTitle" style="flex-direction:row; gap:6px; padding:8px;">
+                <span>📍</span><span data-i18n="modeEditNode">座標設定</span>
+            </button>
 
             <!-- 座標設定ツールパネル -->
             <div id="coordinateEditorBox" class="node-tool-box" style="display:none;">
@@ -157,11 +252,11 @@
                 </div>
             </div>
 
-            <!-- 常時表示されるマップ設定＆オールクリア バー（操作頻度の低いマップ管理系は下に配置） -->
-            <div style="background:#090d16; border:1px solid #334155; border-radius:8px; padding:7px; display:flex; flex-direction:column; gap:6px;">
+            <!-- マップ管理 -->
+            <div class="admin-box">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="font-size:11px; font-weight:bold; color:#cbd5e1;" data-i18n="mapMgmtHeader">🗺️ マップ管理</span>
-                    <span id="mapNodeBadge" style="font-size:10px; color:#38bdf8; font-family:monospace; background:#0c4a6e; border:1px solid #0284c7; padding:1px 6px; border-radius:4px; font-weight:bold;">0マス</span>
+                    <span id="mapNodeBadge" class="mini-badge">0マス</span>
                 </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px;">
                     <button onclick="setupNewMapPrompt()" style="background:#2563eb; color:white; border:1px solid #3b82f6; padding:7px 4px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:4px; box-shadow:0 1px 2px rgba(0,0,0,0.3);" title="新しいマップを作成して設定する" data-i18n-title="btnNewMapTitle">
@@ -175,7 +270,7 @@
                     <span>🏆</span><span data-i18n="btnPointsConfig">マスのレベル別得点 ＆ 目標設定</span>
                 </button>
                 <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #1e293b; padding-top:4px; font-size:10px; color:#94a3b8;">
-                    <label style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="画像を端末から選択して背景にセット" data-i18n-title="btnSetImageTitle">
+                    <label style="background:#1e293b; color:#e2e8f0; border:1px solid #475569; padding:3px 8px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:4px;" title="画像を端末から選択して背景にセット" data-i18n-title="btnSetImageTitle" onclick="if(!guardAdmin()) event.preventDefault();">
                         <span>📷</span><span data-i18n="btnSetImage">画像セット</span>
                         <input type="file" accept="image/*" style="display:none;" onchange="handleFileInput(this)">
                     </label>
@@ -184,24 +279,6 @@
                     </button>
                 </div>
             </div>
-
-            <!-- クラウド保存＆読込ボタン -->
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 6px;">
-                <button class="btn-cloud-save" onclick="saveToCloud()" id="btnSaveCloud" title="部屋名のデータとしてFirebaseクラウドに保存" data-i18n-title="btnCloudSaveTitle">
-                    <span>☁️</span><span data-i18n="btnCloudSave">クラウド保存</span>
-                </button>
-                <button class="btn-cloud-fetch" onclick="loadFromCloud(true)" id="btnFetchCloud" title="Firebaseクラウドから最新の戦況を取得" data-i18n-title="btnCloudFetchTitle">
-                    <span>🔄</span><span data-i18n="btnCloudFetch">最新取得</span>
-                </button>
-            </div>
-
-            <button class="btn-cloud-fetch" onclick="savePngImage()" style="width:100%;">
-                <span>📸</span><span data-i18n="btnSavePng">マップ画像をPNG保存</span>
-            </button>
-        </div>
-
-        <div id="score-container">
-            <div id="score-board" class="score-list"></div>
         </div>
 
         <div class="cloud-info-bar">
@@ -292,6 +369,24 @@
     </div>
 </div>
 
+
+<div id="statusMessage" class="status-msg"></div>
+
+<!-- 合言葉の入力・設定モーダル -->
+<div id="pinModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:16px;">
+    <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:340px; width:100%; color:#f5f5f5; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7);">
+        <div id="pinTitle" style="font-weight:bold; font-size:14px; color:#fbbf24;"></div>
+        <div id="pinDesc" style="font-size:11px; color:#a3a3a3; line-height:1.5;"></div>
+        <input id="pinInput1" type="password" autocomplete="off" style="padding:8px 10px; background:#0a0a0a; border:1px solid #525252; border-radius:6px; color:#fff; font-size:14px;">
+        <input id="pinInput2" type="password" autocomplete="off" style="padding:8px 10px; background:#0a0a0a; border:1px solid #525252; border-radius:6px; color:#fff; font-size:14px; display:none;">
+        <div id="pinError" style="font-size:11px; color:#fb7185; min-height:14px;"></div>
+        <div style="display:flex; justify-content:flex-end; gap:8px;">
+            <button type="button" onclick="closePinModal()" style="padding:6px 14px; background:#262626; border:1px solid #404040; color:#d4d4d4; border-radius:6px; font-size:12px; cursor:pointer;" data-i18n="btnCancel">キャンセル</button>
+            <button type="button" id="pinOkBtn" onclick="submitPinModal()" style="padding:6px 16px; background:#2563eb; border:1px solid #3b82f6; color:white; font-weight:bold; border-radius:6px; font-size:12px; cursor:pointer;">OK</button>
+        </div>
+    </div>
+</div>
+
 <script>
     // -------------------------------------------------------------
     // 🌐 多言語対応 (日本語 / English)
@@ -353,6 +448,73 @@
             btnCloudSaveTitle: '部屋名のデータとしてFirebaseクラウドに保存',
             btnCloudFetch: '最新取得',
             btnCloudFetchTitle: 'Firebaseクラウドから最新の戦況を取得',
+            viewCurrent: '現状',
+            viewPlan: '予定・案',
+            tabPaint: '🎨 塗る',
+            tabScore: '📊 得点',
+            tabAdmin: '⚙️ 管理',
+            planActCreate: '＋ 案を作る',
+            planActDelete: '🗑 この案を削除',
+            planActPromote: '⭐ 次回予定にする',
+            adminLockHeader: '🔑 管理者ロック',
+            btnSetPin: '合言葉を設定/変更',
+            btnRemovePin: '合言葉を解除',
+            btnLockNow: '🔒 今すぐロック',
+            planAdminHeader: '🎯 予定の運用',
+            btnApplyPlan: '✅ 予定を現状に反映',
+            btnClearMainPlan: '予定をリセット',
+            btnAdminLogin: '🔑 管理者',
+            pinTitleUnlock: '🔑 管理者ロック解除',
+            pinDescUnlock: '合言葉を入力すると「現状」とマップ管理を編集できます。',
+            pinTitleSet: '🔑 合言葉を設定',
+            pinDescSet: '4文字以上。管理者だけが知る合言葉を決めてください（目隠し程度の保護です）。',
+            pinPlaceholder: '合言葉',
+            pinPlaceholderConfirm: 'もう一度入力',
+            pinErrWrong: '合言葉が違います',
+            pinErrShort: '4文字以上にしてください',
+            pinErrMismatch: '2回の入力が一致しません',
+            lockBadgeNone: '未設定',
+            lockBadgeLocked: 'ロック中',
+            lockBadgeUnlocked: '解除中',
+            lockDescNone: '合言葉が未設定です。設定するまでは誰でも現状を編集できます。',
+            lockDescLocked: '現状の編集は管理者のみ。予定・案は誰でも編集できます。',
+            lockDescUnlocked: '管理者として現状を編集できます。',
+            bannerReadOnly: '👀 閲覧モード（現状は管理者のみ編集）',
+            syncSaved: '✔ 保存済み',
+            syncSaving: '保存中…',
+            syncDirty: '未保存',
+            syncError: '⚠ 保存失敗',
+            planMainLabel: '📌 次回占領予定',
+            planNewOption: '＋ 新しい案を作る…',
+            planProposalName: '💡 {name}さんの案',
+            msgAdminOnly: '🔒 管理者のみの操作です（管理タブで合言葉を入力）',
+            msgReadOnly: '👀 現状は管理者のみ編集できます。「予定・案」で作戦を立てられます。',
+            msgUnlocked: '🔓 管理者として解除しました',
+            msgPinSet: '✅ 合言葉を設定しました。クラウド保存で全員に反映されます。',
+            msgPinRemoved: '合言葉を解除しました（誰でも編集可）',
+            msgNoPinYet: '先に合言葉を設定してください',
+            msgLocked: '🔒 ロックしました',
+            confirmRemovePin: '合言葉を解除すると、誰でも現状を編集できるようになります。よろしいですか？',
+            promptPlanAuthor: 'あなたの名前（案に表示されます）',
+            msgCantDeleteMain: '次回予定は削除できません（リセットを使ってください）',
+            msgCantDeletePlan: 'この案は削除できません',
+            confirmDeletePlan: '「{name}」を削除しますか？',
+            confirmPromotePlan: '「{name}」の内容を次回占領予定に置き換えますか？',
+            msgPromoted: '⭐ 次回予定に設定しました',
+            confirmClearPlan: '「{name}」の塗りをリセットしますか？',
+            msgCantClearPlan: 'この案はリセットできません',
+            msgPlanSaving: '☁️ 予定を保存中…',
+            msgPlanFetching: '☁️ 予定を取得中…',
+            msgPlanSaved: '✅ 予定を保存しました',
+            msgPlanSynced: '✅ 最新の予定を取得しました',
+            msgPlanSaveError: '❌ 予定の保存に失敗: {err}',
+            msgMainPlanEmpty: '次回予定が空です',
+            confirmApplyPlan: '次回予定を「現状」に反映します。よろしいですか？',
+            confirmClearPlanAfter: '反映後、次回予定をリセットしますか？',
+            msgPlanApplied: '✅ 予定を現状に反映しました（クラウド保存を忘れずに）',
+            confirmClearMainPlan: '次回予定をすべてリセットしますか？',
+            msgMainPlanCleared: '次回予定をリセットしました',
+            scorePlanHeader: '📌 表示中:',
             btnSavePng: 'マップ画像をPNG保存',
             cloudInfoText: '⚡ クラウド連携: Firebase (直接同期)',
             cloudInfoFree: '無料・無制限',
@@ -468,6 +630,73 @@
             btnCloudSaveTitle: "Save this room's data to the Firebase cloud",
             btnCloudFetch: 'Fetch Latest',
             btnCloudFetchTitle: 'Get the latest battle state from the Firebase cloud',
+            viewCurrent: 'Current',
+            viewPlan: 'Plans',
+            tabPaint: '🎨 Paint',
+            tabScore: '📊 Score',
+            tabAdmin: '⚙️ Admin',
+            planActCreate: '+ New proposal',
+            planActDelete: '🗑 Delete this proposal',
+            planActPromote: '⭐ Make next target',
+            adminLockHeader: '🔑 Admin lock',
+            btnSetPin: 'Set / change passphrase',
+            btnRemovePin: 'Remove passphrase',
+            btnLockNow: '🔒 Lock now',
+            planAdminHeader: '🎯 Plan management',
+            btnApplyPlan: '✅ Apply plan to Current',
+            btnClearMainPlan: 'Reset plan',
+            btnAdminLogin: '🔑 Admin',
+            pinTitleUnlock: '🔑 Admin unlock',
+            pinDescUnlock: 'Enter the passphrase to edit Current and manage the map.',
+            pinTitleSet: '🔑 Set passphrase',
+            pinDescSet: '4+ characters. Pick one only the admin knows (light protection only).',
+            pinPlaceholder: 'Passphrase',
+            pinPlaceholderConfirm: 'Enter again',
+            pinErrWrong: 'Wrong passphrase',
+            pinErrShort: 'Use at least 4 characters',
+            pinErrMismatch: 'The two entries do not match',
+            lockBadgeNone: 'Not set',
+            lockBadgeLocked: 'Locked',
+            lockBadgeUnlocked: 'Unlocked',
+            lockDescNone: 'No passphrase yet. Anyone can edit Current until you set one.',
+            lockDescLocked: 'Only the admin can edit Current. Anyone can edit plans.',
+            lockDescUnlocked: 'You can edit Current as admin.',
+            bannerReadOnly: '👀 View mode (only the admin edits Current)',
+            syncSaved: '✔ Saved',
+            syncSaving: 'Saving…',
+            syncDirty: 'Unsaved',
+            syncError: '⚠ Save failed',
+            planMainLabel: '📌 Next target',
+            planNewOption: '+ New proposal…',
+            planProposalName: '💡 {name}\'s proposal',
+            msgAdminOnly: '🔒 Admin only (enter the passphrase in the Admin tab)',
+            msgReadOnly: '👀 Only the admin can edit Current. Plan in "Plans".',
+            msgUnlocked: '🔓 Unlocked as admin',
+            msgPinSet: '✅ Passphrase set. Cloud-save to apply it for everyone.',
+            msgPinRemoved: 'Passphrase removed (anyone can edit)',
+            msgNoPinYet: 'Set a passphrase first',
+            msgLocked: '🔒 Locked',
+            confirmRemovePin: 'Without a passphrase anyone can edit Current. Continue?',
+            promptPlanAuthor: 'Your name (shown on your proposal)',
+            msgCantDeleteMain: 'The next target can\'t be deleted (use Reset)',
+            msgCantDeletePlan: 'This proposal can\'t be deleted',
+            confirmDeletePlan: 'Delete "{name}"?',
+            confirmPromotePlan: 'Replace the next target with "{name}"?',
+            msgPromoted: '⭐ Set as next target',
+            confirmClearPlan: 'Reset the paint in "{name}"?',
+            msgCantClearPlan: 'This proposal can\'t be reset',
+            msgPlanSaving: '☁️ Saving plans…',
+            msgPlanFetching: '☁️ Fetching plans…',
+            msgPlanSaved: '✅ Plans saved',
+            msgPlanSynced: '✅ Plans updated',
+            msgPlanSaveError: '❌ Failed to save plans: {err}',
+            msgMainPlanEmpty: 'The next target is empty',
+            confirmApplyPlan: 'Apply the next target to Current. Continue?',
+            confirmClearPlanAfter: 'Reset the next target after applying?',
+            msgPlanApplied: '✅ Applied to Current (remember to cloud-save)',
+            confirmClearMainPlan: 'Reset the entire next target?',
+            msgMainPlanCleared: 'Next target reset',
+            scorePlanHeader: '📌 Showing:',
             btnSavePng: 'Save Map as PNG',
             cloudInfoText: '⚡ Cloud Sync: Firebase (direct)',
             cloudInfoFree: 'Free & Unlimited',
@@ -587,6 +816,8 @@
         if (typeof updateNodeCountLabel === 'function') updateNodeCountLabel();
         if (typeof updateBoard === 'function') updateBoard();
         if (typeof refreshColorSelectLabels === 'function') refreshColorSelectLabels();
+        if (typeof refreshAccessUI === 'function') refreshAccessUI();
+        if (typeof refreshViewUI === 'function') refreshViewUI();
     }
 
     // -------------------------------------------------------------
@@ -646,6 +877,7 @@
 
     // 現在選択中の色に、任意の名前（同盟名など）をつける。
     function renameSelectedColor() {
+        if (!guardAdmin()) return;
         const defaultLabel = (() => {
             const idx = colorList.indexOf(selectedColor);
             return idx >= 0 ? getColorNamesList()[idx] : selectedColor;
@@ -986,9 +1218,9 @@
         fillCircle(point, isErase ? null : color);
     }
 
-    function redrawPaintLayer() {
+    function drawStatusToPaintLayer(status) {
         pCtx.clearRect(0, 0, paintCanvas.width, paintCanvas.height);
-        Object.entries(areaStatus).forEach(([key, color]) => {
+        Object.entries(status).forEach(([key, color]) => {
             const pt = mapMasterData.find(p => (p.x + '-' + p.y) === key);
             if (!pt) return;
             const px = Math.floor(pt.x * paintCanvas.width / 100);
@@ -997,7 +1229,21 @@
         });
     }
 
+    function redrawPaintLayer() {
+        if (viewMode === 'plan') {
+            // 予定・案を見ている間は、paintCanvas＝予定の塗り、ghostCanvas＝現状の塗り（薄く下に敷く）
+            drawStatusToPaintLayer(areaStatus);
+            ghostCanvas.width = paintCanvas.width;
+            ghostCanvas.height = paintCanvas.height;
+            gCtx.drawImage(paintCanvas, 0, 0);
+            drawStatusToPaintLayer(viewStatus());
+        } else {
+            drawStatusToPaintLayer(areaStatus);
+        }
+    }
+
     function openPointsModal() {
+        if (!guardAdmin()) return;
         const modal = document.getElementById('pointsConfigModal');
         if (!modal) return;
         modal.style.display = 'flex';
@@ -1125,6 +1371,12 @@
     }
 
     function setMode(mode) {
+        if (mode !== 'paint') {
+            // 出撃・本拠・座標設定は「現状」のデータを触る操作なので、予定表示中は現状に戻し、
+            // 管理者でなければ塗りモードのままにする。
+            if (viewMode === 'plan') setViewMode('current');
+            if (!isAdmin()) { guardAdmin(); mode = 'paint'; }
+        }
         currentMode = mode;
         document.querySelectorAll('.mode-btn').forEach(b => {
             b.classList.remove('active');
@@ -1184,6 +1436,7 @@
     }
 
     function handleFileInput(input) {
+        if (!isAdmin()) return;
         if (!input.files || !input.files[0]) return;
         const file = input.files[0];
         const reader = new FileReader();
@@ -1264,7 +1517,7 @@
         const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
         const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
 
-        if (currentMode === 'edit_node') {
+        if (currentMode === 'edit_node' && viewMode === 'current' && isAdmin()) {
             let nearestIdx = -1, minD = 40;
             mapMasterData.forEach((p, idx) => {
                 const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
@@ -1336,6 +1589,14 @@
         const pctX = Number(((x / canvas.width) * 100).toFixed(2));
         const pctY = Number(((y / canvas.height) * 100).toFixed(2));
 
+        // 現状は管理者だけが編集できる。予定・案は誰でも塗れる（塗り以外は不可）。
+        if (viewMode === 'plan') {
+            if (currentMode !== 'paint') return;
+        } else if (!isAdmin()) {
+            showReadOnlyHint();
+            return;
+        }
+
         if (currentMode === 'start') {
             const idx = startPositions.findIndex(p => Math.hypot(p.x - x, p.y - y) < 40);
             if (idx > -1) startPositions.splice(idx, 1);
@@ -1399,7 +1660,7 @@
 
     canvas.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        if (currentMode === 'edit_node') {
+        if (currentMode === 'edit_node' && viewMode === 'current' && isAdmin()) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width, scaleY = canvas.height / rect.height;
             const x = Math.floor((e.clientX - rect.left) * scaleX), y = Math.floor((e.clientY - rect.top) * scaleY);
@@ -1423,8 +1684,9 @@
     });
 
     function applyPaint(nearest, x, y) {
+        const status = viewStatus();
         let targetKey = nearest.x + '-' + nearest.y;
-        for (const k in areaStatus) {
+        for (const k in status) {
             const parts = k.split('-');
             if (parts.length >= 2) {
                 const kx = parseFloat(parts[0]), ky = parseFloat(parts[1]);
@@ -1435,14 +1697,19 @@
             }
         }
 
-        if (areaStatus[targetKey] && areaStatus[targetKey].toLowerCase() === selectedColor.toLowerCase()) {
+        if (status[targetKey] && status[targetKey].toLowerCase() === selectedColor.toLowerCase()) {
             paintCellSafely(nearest, x, y, null, true);
-            delete areaStatus[targetKey];
+            delete status[targetKey];
         } else {
             paintCellSafely(nearest, x, y, selectedColor, false);
-            areaStatus[targetKey] = selectedColor;
+            status[targetKey] = selectedColor;
         }
-        saveLocal();
+        if (viewMode === 'plan') {
+            const plan = plansData[activePlanId];
+            if (plan) touchPlan(plan);   // 予定はクラウドへ自動保存（現状のローカル保存は触らない）
+        } else {
+            saveLocal();
+        }
         updateBoard();
         render();
     }
@@ -1472,7 +1739,15 @@
             ctx.setLineDash([]);
         }
 
-        ctx.drawImage(paintCanvas, 0, 0);
+        if (viewMode === 'plan') {
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(ghostCanvas, 0, 0);   // 現状（薄く）
+            ctx.globalAlpha = 1;
+            drawPlanLayer();                     // 予定（縞模様）
+        } else {
+            ctx.drawImage(paintCanvas, 0, 0);
+        }
+        const badgeStatus = mergedStatus();
 
         mapMasterData.forEach((p, idx) => {
             const px = p.x * canvas.width / 100, py = p.y * canvas.height / 100;
@@ -1489,7 +1764,7 @@
             }
 
             if (currentMode === 'edit_node' || nodeDisplayMode === 'badge') {
-                const color = areaStatus[p.x + '-' + p.y];
+                const color = badgeStatus[p.x + '-' + p.y];
                 const badgeRadius = p.lv >= 6 ? 16 : p.lv >= 4 ? 13 : 11;
                 ctx.beginPath();
                 ctx.arc(px, py, badgeRadius, 0, Math.PI * 2);
@@ -1538,6 +1813,7 @@
     }
 
     function importCoordinatesPrompt() {
+        if (!guardAdmin()) return;
         const input = prompt(t('promptImportJson'));
         if (!input) return;
         try {
@@ -1559,6 +1835,7 @@
     }
 
     function restoreDefault160() {
+        if (!guardAdmin()) return;
         if (confirm(t('confirmRestore160'))) {
             mapMasterData = [{"x":18.26,"y":11.03,"lv":1},{"x":25.97,"y":11.03,"lv":1},{"x":34.12,"y":11.1,"lv":1},{"x":42.04,"y":11.1,"lv":1},{"x":50.77,"y":10.96,"lv":1},{"x":58.55,"y":11.25,"lv":1},{"x":66.04,"y":10.96,"lv":1},{"x":74.55,"y":11.6,"lv":1},{"x":82.55,"y":10.96,"lv":1},{"x":21.46,"y":15.83,"lv":1},{"x":29.68,"y":15.97,"lv":1},{"x":38.19,"y":15.69,"lv":1},{"x":46.26,"y":15.47,"lv":1},{"x":54.41,"y":15.83,"lv":1},{"x":62.19,"y":15.26,"lv":1},{"x":69.32,"y":15.54,"lv":1},{"x":78.48,"y":15.54,"lv":1},{"x":10.77,"y":19.91,"lv":1},{"x":14.77,"y":22.49,"lv":1},{"x":11.13,"y":27.22,"lv":1},{"x":14.77,"y":31.23,"lv":1},{"x":10.99,"y":34.96,"lv":1},{"x":15.57,"y":38.9,"lv":1},{"x":11.21,"y":41.91,"lv":1},{"x":14.77,"y":47.28,"lv":1},{"x":10.55,"y":50.5,"lv":1},{"x":14.99,"y":54.58,"lv":1},{"x":10.63,"y":58.52,"lv":1},{"x":15.28,"y":61.68,"lv":1},{"x":10.7,"y":65.4,"lv":1},{"x":14.92,"y":68.84,"lv":1},{"x":11.28,"y":72.78,"lv":1},{"x":14.63,"y":77.72,"lv":1},{"x":11.13,"y":80.23,"lv":1},{"x":19.13,"y":89.04,"lv":1},{"x":21.9,"y":85.32,"lv":1},{"x":26.41,"y":89.68,"lv":1},{"x":30.33,"y":85.74,"lv":1},{"x":34.92,"y":89.18,"lv":1},{"x":39.28,"y":85.6,"lv":1},{"x":43.06,"y":89.18,"lv":1},{"x":46.41,"y":84.89,"lv":1},{"x":50.04,"y":89.11,"lv":1},{"x":53.83,"y":84.6,"lv":1},{"x":58.41,"y":88.47,"lv":1},{"x":61.9,"y":84.38,"lv":1},{"x":65.83,"y":89.18,"lv":1},{"x":69.61,"y":85.32,"lv":1},{"x":74.7,"y":88.32,"lv":1},{"x":78.92,"y":84.81,"lv":1},{"x":82.92,"y":88.75,"lv":1},{"x":88.81,"y":81.45,"lv":1},{"x":85.46,"y":77.22,"lv":1},{"x":88.95,"y":72.92,"lv":1},{"x":88.81,"y":66.26,"lv":1},{"x":84.73,"y":68.77,"lv":1},{"x":85.46,"y":61.75,"lv":1},{"x":89.83,"y":58.24,"lv":1},{"x":85.61,"y":55.3,"lv":1},{"x":89.32,"y":51.22,"lv":1},{"x":85.46,"y":47.64,"lv":1},{"x":89.83,"y":43.12,"lv":1},{"x":85.61,"y":39.97,"lv":1},{"x":89.68,"y":34.74,"lv":1},{"x":85.53,"y":32.88,"lv":1},{"x":89.68,"y":27.65,"lv":1},{"x":85.61,"y":23.93,"lv":1},{"x":89.53,"y":20.13,"lv":1},{"x":26.77,"y":80.87,"lv":2},{"x":31.06,"y":77.15,"lv":2},{"x":34.63,"y":80.66,"lv":2},{"x":38.48,"y":76.07,"lv":2},{"x":41.53,"y":80.16,"lv":2},{"x":45.24,"y":75.57,"lv":2},{"x":49.68,"y":80.16,"lv":2},{"x":53.97,"y":76.29,"lv":2},{"x":57.83,"y":80.66,"lv":2},{"x":61.39,"y":76.65,"lv":2},{"x":66.04,"y":80.59,"lv":2},{"x":69.53,"y":78.01,"lv":2},{"x":73.53,"y":81.09,"lv":2},{"x":81.24,"y":73.5,"lv":2},{"x":76.73,"y":71.13,"lv":2},{"x":81.24,"y":66.33,"lv":2},{"x":77.24,"y":62.18,"lv":2},{"x":81.68,"y":58.24,"lv":2},{"x":76.88,"y":54.94,"lv":2},{"x":81.1,"y":51.43,"lv":2},{"x":77.03,"y":47.64,"lv":2},{"x":80.95,"y":44.13,"lv":2},{"x":76.37,"y":40.9,"lv":2},{"x":81.39,"y":36.32,"lv":2},{"x":77.46,"y":33.17,"lv":2},{"x":81.32,"y":28.72,"lv":2},{"x":74.41,"y":19.56,"lv":2},{"x":70.26,"y":23.35,"lv":2},{"x":64.81,"y":20.13,"lv":2},{"x":61.68,"y":24.79,"lv":2},{"x":57.24,"y":19.84,"lv":2},{"x":53.97,"y":24.93,"lv":2},{"x":49.68,"y":20.2,"lv":2},{"x":46.48,"y":24.86,"lv":2},{"x":41.9,"y":20.13,"lv":2},{"x":38.55,"y":24,"lv":2},{"x":33.53,"y":19.77,"lv":2},{"x":29.9,"y":22.92,"lv":2},{"x":25.9,"y":19.84,"lv":2},{"x":19.13,"y":27.79,"lv":2},{"x":23.21,"y":31.16,"lv":2},{"x":19.28,"y":35.24,"lv":2},{"x":23.43,"y":39.76,"lv":2},{"x":18.7,"y":42.98,"lv":2},{"x":23.57,"y":46.28,"lv":2},{"x":19.21,"y":50.29,"lv":2},{"x":23.79,"y":54.58,"lv":2},{"x":19.43,"y":58.45,"lv":2},{"x":23.79,"y":62.03,"lv":2},{"x":19.13,"y":65.97,"lv":2},{"x":23.57,"y":69.2,"lv":2},{"x":19.13,"y":73.42,"lv":2},{"x":34.84,"y":73.42,"lv":3},{"x":42.7,"y":71.28,"lv":3},{"x":49.97,"y":70.92,"lv":3},{"x":57.83,"y":72.13,"lv":3},{"x":65.39,"y":73.42,"lv":3},{"x":72.95,"y":66.12,"lv":3},{"x":71.79,"y":58.45,"lv":3},{"x":71.35,"y":51.36,"lv":3},{"x":70.04,"y":44.2,"lv":3},{"x":72.52,"y":36.32,"lv":3},{"x":27.21,"y":35.89,"lv":3},{"x":28.08,"y":42.98,"lv":3},{"x":29.61,"y":50.79,"lv":3},{"x":28.44,"y":58.24,"lv":3},{"x":28.44,"y":65.97,"lv":3},{"x":34.12,"y":27.08,"lv":3},{"x":42.04,"y":28.72,"lv":3},{"x":49.97,"y":29.87,"lv":3},{"x":57.97,"y":29.01,"lv":3},{"x":65.9,"y":28.15,"lv":3},{"x":43.72,"y":65.69,"lv":4},{"x":55.79,"y":66.62,"lv":4},{"x":66.19,"y":58.6,"lv":4},{"x":33.97,"y":57.09,"lv":4},{"x":34.04,"y":42.91,"lv":4},{"x":42.7,"y":34.24,"lv":4},{"x":57.83,"y":34.6,"lv":4},{"x":65.39,"y":46.49,"lv":4},{"x":41.61,"y":58.67,"lv":5},{"x":41.46,"y":42.41,"lv":5},{"x":58.92,"y":42.62,"lv":5},{"x":59.28,"y":59.17,"lv":5},{"x":50.84,"y":58.6,"lv":6},{"x":49.75,"y":41.55,"lv":6},{"x":50.12,"y":49.93,"lv":7},{"x":12.01,"y":3.18,"lv":1},{"x":20.81,"y":3.25,"lv":1},{"x":29.53,"y":3.39,"lv":1},{"x":38.33,"y":2.82,"lv":1},{"x":47.43,"y":2.75,"lv":1},{"x":54.99,"y":2.68,"lv":1},{"x":63.93,"y":2.75,"lv":1},{"x":70.19,"y":3.04,"lv":1},{"x":77.75,"y":3.18,"lv":1},{"x":86.7,"y":3.11,"lv":1},{"x":4.44,"y":14.78,"lv":1},{"x":95.93,"y":13.64,"lv":1},{"x":3.86,"y":22.23,"lv":1},{"x":3.43,"y":30.18,"lv":1},{"x":3.28,"y":38.85,"lv":1},{"x":2.99,"y":46.37,"lv":1},{"x":3.64,"y":54.25,"lv":1},{"x":3.28,"y":61.7,"lv":1},{"x":2.99,"y":69.51,"lv":1},{"x":3.28,"y":77.46,"lv":1},{"x":3.43,"y":85.96,"lv":1},{"x":11.43,"y":97.35,"lv":1},{"x":20.95,"y":96.99,"lv":1},{"x":29.75,"y":97.35,"lv":1},{"x":38.41,"y":97.49,"lv":1},{"x":46.48,"y":97.28,"lv":1},{"x":54.63,"y":97.42,"lv":1},{"x":62.7,"y":96.99,"lv":1},{"x":71.28,"y":96.85,"lv":1},{"x":80.08,"y":96.92,"lv":1},{"x":87.86,"y":96.85,"lv":1},{"x":97.17,"y":87.18,"lv":1},{"x":96.81,"y":78.94,"lv":1},{"x":96.95,"y":69.77,"lv":1},{"x":96.81,"y":62.18,"lv":1},{"x":97.1,"y":54.3,"lv":1},{"x":96.73,"y":45.56,"lv":1},{"x":97.32,"y":37.89,"lv":1},{"x":96.95,"y":30.59,"lv":1},{"x":96.3,"y":21.49,"lv":1}];
             updateNodeCountLabel();
@@ -1571,6 +1848,7 @@
     }
 
     function clearAllNodes() {
+        if (!guardAdmin()) return;
         if (confirm(t('confirmClearNodes'))) {
             mapMasterData = [];
             areaStatus = {};
@@ -1585,6 +1863,7 @@
     }
 
     function clearAllMapAndNodes() {
+        if (!guardAdmin()) return;
         if (confirm(t('confirmClearAll'))) {
             mapMasterData = [];
             areaStatus = {};
@@ -1607,6 +1886,7 @@
     }
 
     function setupNewMapPrompt() {
+        if (!guardAdmin()) return;
         const name = prompt(t('promptNewMapName'), t('defaultNewMapName'));
         if (!name) return;
         const imgUrl = prompt(t('promptNewMapImgUrl'), '');
@@ -1637,10 +1917,12 @@
         }
     }
 
-    function updateBoard() {
-        colorList.forEach(c => { scores[c] = 0; counts[c] = 0; });
-        let totalOccupied = 0;
-        Object.entries(areaStatus).forEach(([k, c]) => {
+    // 塗りデータ(areaStatus形式)から、同盟ごとの得点・マス数を数える
+    function computeScores(status) {
+        const sc = {}, cn = {};
+        colorList.forEach(c => { sc[c] = 0; cn[c] = 0; });
+        let total = 0;
+        Object.entries(status).forEach(([k, c]) => {
             let pt = mapMasterData.find(p => (p.x + '-' + p.y) === k);
             if (!pt) {
                 const parts = k.split('-');
@@ -1651,20 +1933,32 @@
             }
             const lvKey = pt ? pt.lv : 1;
             const pts = pointsConfig[lvKey] !== undefined ? pointsConfig[lvKey] : 100;
-            if (scores[c] !== undefined) {
-                scores[c] += pts;
-                counts[c]++;
-                totalOccupied++;
+            if (sc[c] !== undefined) {
+                sc[c] += pts;
+                cn[c]++;
+                total++;
             }
         });
+        return { scores: sc, counts: cn, total: total };
+    }
+
+    function updateBoard() {
+        // 予定・案を見ている時は「現状に予定を重ねた結果」を表示し、現状との差も出す
+        const baseRes = computeScores(areaStatus);
+        const shownRes = viewMode === 'plan' ? computeScores(mergedStatus()) : baseRes;
+        scores = shownRes.scores;
+        counts = shownRes.counts;
+        const totalOccupied = shownRes.total;
 
         const activeList = colorList.map((c, i) => ({
             hex: c,
             name: getColorLabel(c),
-            score: scores[c] || 0,
-            count: counts[c] || 0
+            score: shownRes.scores[c] || 0,
+            count: shownRes.counts[c] || 0,
+            delta: (shownRes.scores[c] || 0) - (baseRes.scores[c] || 0),
+            baseCount: baseRes.counts[c] || 0
         }))
-        .filter(item => item.count > 0)
+        .filter(item => item.count > 0 || (viewMode === 'plan' && item.baseCount > 0))
         .sort((a, b) => b.score - a.score);
 
         const container = document.getElementById('score-board');
@@ -1674,6 +1968,13 @@
         summaryHeader.style.cssText = 'padding: 6px 4px; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; margin-bottom: 6px;';
         summaryHeader.innerHTML = '<span>' + t('occupyingPrefix') + ' <strong style="color:#fbbf24;">' + activeList.length + '</strong> ' + t('allianceUnit') + ' (' + t('cellsCount', { n: totalOccupied }) + ')</span><span style="font-size:10px; color:#fbbf24; background:rgba(217, 119, 6, 0.2); border:1px solid rgba(217, 119, 6, 0.4); padding:1px 5px; border-radius:4px; font-weight:bold;">' + t('targetLabelShort') + ': ' + (targetScore || 50000).toLocaleString() + 'pt</span>';
         container.appendChild(summaryHeader);
+
+        if (viewMode === 'plan') {
+            const planNote = document.createElement('div');
+            planNote.style.cssText = 'padding: 4px 8px; margin-bottom: 6px; font-size: 10px; font-weight: bold; color: #fde68a; background: rgba(217,119,6,0.18); border: 1px solid rgba(217,119,6,0.5); border-radius: 6px;';
+            planNote.textContent = t('scorePlanHeader') + '　' + planDisplayName(plansData[activePlanId]);
+            container.appendChild(planNote);
+        }
 
         if (activeList.length === 0) {
             const emptyNotice = document.createElement('div');
@@ -1705,9 +2006,729 @@
                         '<span style="color:#f59e0b;">' + t('pctAchieved', { n: pct }) + '</span>' +
                     '</div>' +
                 '</div>' +
-                '<div class="score-val">' + item.score.toLocaleString() + '<span style="font-size:10px; color:#94a3b8; margin-left:2px;">pts</span></div>';
+                '<div class="score-val">' + item.score.toLocaleString() + '<span style="font-size:10px; color:#94a3b8; margin-left:2px;">pts</span>' +
+                    ((viewMode === 'plan' && item.delta !== 0)
+                        ? '<div style="font-size:10px; font-weight:bold; color:' + (item.delta > 0 ? '#34d399' : '#fb7185') + ';">' + (item.delta > 0 ? '+' : '') + item.delta.toLocaleString() + '</div>'
+                        : '') +
+                '</div>';
             container.appendChild(card);
         });
+    }
+
+    // -------------------------------------------------------------
+    // 🔐 合言葉（現状の編集ロック）
+    //   ・現状を変えられるのは「合言葉を知っている人」だけ。
+    //   ・合言葉そのものは保存せず、ハッシュだけを部屋データに入れて共有する。
+    //   ・ログインの仕組みが無いアプリなので、あくまで「うっかり操作よけ」の
+    //     ロックであり、技術的に詳しい人が本気で破るのを防ぐものではない。
+    // -------------------------------------------------------------
+    let adminPinHash = '';      // 空文字 = 合言葉なし（全員が現状を編集できる）
+    let currentTab = 'paint';
+    let pinModalMode = 'unlock';
+    let pinAfterUnlock = null;
+    let lastReadOnlyHintAt = 0;
+
+    async function hashPin(pin) {
+        const src = 'territory-map-pin:' + pin;
+        try {
+            if (window.crypto && window.crypto.subtle) {
+                const buf = await window.crypto.subtle.digest('SHA-256', new TextEncoder().encode(src));
+                return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            }
+        } catch (e) {}
+        // https以外などで crypto.subtle が使えない場合の簡易ハッシュ
+        let h1 = 5381, h2 = 52711;
+        for (let i = 0; i < src.length; i++) {
+            const c = src.charCodeAt(i);
+            h1 = ((h1 * 33) ^ c) >>> 0;
+            h2 = ((h2 * 31) ^ c) >>> 0;
+        }
+        return 'x' + h1.toString(16) + h2.toString(16);
+    }
+
+    function adminStorageKey() { return 'territory_admin_' + currentRoom; }
+
+    function isAdmin() {
+        if (!adminPinHash) return true;
+        try { return localStorage.getItem(adminStorageKey()) === adminPinHash; } catch (e) { return false; }
+    }
+
+    // 管理者だけの操作の入口で呼ぶ。管理者でなければ合言葉入力を出して false を返す。
+    function guardAdmin() {
+        if (isAdmin()) return true;
+        showStatus(t('msgAdminOnly'), 'warning');
+        openUnlockModal();
+        return false;
+    }
+
+    function showReadOnlyHint() {
+        const now = Date.now();
+        if (now - lastReadOnlyHintAt < 3000) return;
+        lastReadOnlyHintAt = now;
+        showStatus(t('msgReadOnly'), 'warning');
+    }
+
+    function showPinModal(mode) {
+        pinModalMode = mode;
+        document.getElementById('pinTitle').textContent = t(mode === 'set' ? 'pinTitleSet' : 'pinTitleUnlock');
+        document.getElementById('pinDesc').textContent = t(mode === 'set' ? 'pinDescSet' : 'pinDescUnlock');
+        const i1 = document.getElementById('pinInput1'), i2 = document.getElementById('pinInput2');
+        i1.value = ''; i2.value = '';
+        i1.placeholder = t('pinPlaceholder');
+        i2.placeholder = t('pinPlaceholderConfirm');
+        i2.style.display = mode === 'set' ? 'block' : 'none';
+        document.getElementById('pinError').textContent = '';
+        document.getElementById('pinModal').style.display = 'flex';
+        setTimeout(() => { try { i1.focus(); } catch (e) {} }, 60);
+    }
+
+    function closePinModal() {
+        document.getElementById('pinModal').style.display = 'none';
+        pinAfterUnlock = null;
+    }
+
+    function openUnlockModal(afterCb) {
+        if (isAdmin()) { if (afterCb) afterCb(); return; }
+        pinAfterUnlock = afterCb || null;
+        showPinModal('unlock');
+        pinAfterUnlock = afterCb || null; // showPinModalでは消さないが念のため
+    }
+
+    function openSetPinModal() {
+        if (!guardAdmin()) return;
+        showPinModal('set');
+    }
+
+    async function submitPinModal() {
+        const v1 = document.getElementById('pinInput1').value;
+        const v2 = document.getElementById('pinInput2').value;
+        const err = document.getElementById('pinError');
+        err.textContent = '';
+        if (pinModalMode === 'unlock') {
+            const h = await hashPin(v1);
+            if (h !== adminPinHash) { err.textContent = t('pinErrWrong'); return; }
+            try { localStorage.setItem(adminStorageKey(), adminPinHash); } catch (e) {}
+            const cb = pinAfterUnlock;
+            document.getElementById('pinModal').style.display = 'none';
+            pinAfterUnlock = null;
+            refreshAccessUI();
+            showStatus(t('msgUnlocked'), 'success');
+            if (cb) cb();
+            return;
+        }
+        // 設定・変更
+        if (v1.length < 4) { err.textContent = t('pinErrShort'); return; }
+        if (v1 !== v2) { err.textContent = t('pinErrMismatch'); return; }
+        adminPinHash = await hashPin(v1);
+        try { localStorage.setItem(adminStorageKey(), adminPinHash); } catch (e) {}
+        document.getElementById('pinModal').style.display = 'none';
+        pinAfterUnlock = null;
+        saveLocal();
+        refreshAccessUI();
+        await saveToCloud(); // 他の端末にもロックが効くよう、すぐクラウドへ反映
+        showStatus(t('msgPinSet'), 'success');
+    }
+
+    async function removeAdminPin() {
+        if (!guardAdmin()) return;
+        if (!adminPinHash) return;
+        if (!confirm(t('confirmRemovePin'))) return;
+        adminPinHash = '';
+        try { localStorage.removeItem(adminStorageKey()); } catch (e) {}
+        saveLocal();
+        refreshAccessUI();
+        await saveToCloud();
+        showStatus(t('msgPinRemoved'), 'success');
+    }
+
+    function lockThisDevice() {
+        if (!adminPinHash) { showStatus(t('msgNoPinYet'), 'warning'); return; }
+        try { localStorage.removeItem(adminStorageKey()); } catch (e) {}
+        if (currentMode === 'edit_node' || currentMode === 'start' || currentMode === 'home') setMode('paint');
+        refreshAccessUI();
+        showStatus(t('msgLocked'), 'success');
+    }
+
+    function refreshAccessUI() {
+        const hasPin = !!adminPinHash, admin = isAdmin();
+        const icon = document.getElementById('adminLockIcon');
+        if (icon) icon.textContent = hasPin ? (admin ? '🔓' : '🔒') : '';
+        const badge = document.getElementById('adminLockBadge');
+        if (badge) badge.textContent = t(!hasPin ? 'lockBadgeNone' : (admin ? 'lockBadgeUnlocked' : 'lockBadgeLocked'));
+        const st = document.getElementById('adminLockStatus');
+        if (st) st.textContent = t(!hasPin ? 'lockDescNone' : (admin ? 'lockDescUnlocked' : 'lockDescLocked'));
+        const promo = document.getElementById('btnPromotePlan');
+        if (promo) promo.style.display = admin ? '' : 'none';
+        if (!admin && currentTab === 'admin') setTab('paint');
+        if (!admin && viewMode === 'current' && currentMode !== 'paint') setMode('paint');
+        updateViewBanner();
+        refreshViewUI(true);
+    }
+
+    function setTab(name) {
+        if (name === 'admin' && !isAdmin()) {
+            openUnlockModal(() => setTab('admin'));
+            return;
+        }
+        if (currentTab === 'admin' && name !== 'admin' && currentMode === 'edit_node') setMode('paint');
+        currentTab = name;
+        ['paint', 'score', 'admin'].forEach(n => {
+            const pane = document.getElementById('tab-' + n);
+            const btn = document.getElementById('tabBtn-' + n);
+            if (pane) pane.classList.toggle('active', n === name);
+            if (btn) btn.classList.toggle('active', n === name);
+        });
+        if (name === 'score') updateBoard();
+    }
+
+    // -------------------------------------------------------------
+    // 🎯 予定・案（「現状」とは別のドキュメントに保存。誰でも編集できる）
+    //   ・予定(main)  : 次回の占領予定地。みんなで1枚を共有して編集する。
+    //   ・案(p…)      : 「ここを占領したらどう？」の提案。提案者の名前つきで複数持てる。
+    //   ・予定/案は「現状に重ねる上書き」として扱う（現状は一切変更しない）。
+    //   ・保存するときは、先にクラウドの最新を取ってから「自分が変えたマスだけ」を
+    //     重ねて書く（3-way merge）。同時に編集しても、お互いの塗りを消しにくい。
+    // -------------------------------------------------------------
+    const MAIN_PLAN_ID = 'main';
+    let viewMode = 'current';          // 'current' | 'plan'
+    let plansData = { main: { id: 'main', name: '', author: '', owner: '', areaStatus: {}, updatedAt: '' } };
+    let planBaseline = {};             // 最後にクラウドと同期した時点の内容
+    let deletedPlanIds = new Set();
+    let activePlanId = MAIN_PLAN_ID;
+    let planDirty = false;
+    let planSyncState = 'idle';        // idle | dirty | saving | saved | error
+    let planSyncing = false, planSyncAgain = false;
+    let planSaveTimer = null, planPollTimer = null;
+
+    const ghostCanvas = document.createElement('canvas');
+    const gCtx = ghostCanvas.getContext('2d');
+    const stripeCanvas = document.createElement('canvas');
+    const sCtx = stripeCanvas.getContext('2d');
+    let stripePattern = null;
+
+    function clonePlain(o) { return JSON.parse(JSON.stringify(o)); }
+
+    function getDeviceId() {
+        try {
+            let id = localStorage.getItem('territory_device_id');
+            if (!id) {
+                id = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+                localStorage.setItem('territory_device_id', id);
+            }
+            return id;
+        } catch (e) { return 'anon'; }
+    }
+    function getMyName() {
+        try { return localStorage.getItem('territory_my_name') || ''; } catch (e) { return ''; }
+    }
+
+    function defaultMainPlan() {
+        return { id: MAIN_PLAN_ID, name: '', author: '', owner: '', areaStatus: {}, updatedAt: '' };
+    }
+
+    function resetPlansForRoom() {
+        stopPlanPolling();
+        clearTimeout(planSaveTimer);
+        viewMode = 'current';
+        plansData = { main: defaultMainPlan() };
+        planBaseline = {};
+        deletedPlanIds = new Set();
+        activePlanId = MAIN_PLAN_ID;
+        planDirty = false;
+        planSyncState = 'idle';
+    }
+
+    // 現在見ている側の塗りデータ（現状 or 選択中の予定/案）
+    function viewStatus() {
+        if (viewMode === 'plan') {
+            const p = plansData[activePlanId] || plansData[MAIN_PLAN_ID];
+            return p ? p.areaStatus : {};
+        }
+        return areaStatus;
+    }
+
+    // 「現状」に「予定」を重ねた結果（予定側が優先）
+    function mergeStatusOver(cur, plan) {
+        const out = Object.assign({}, cur);
+        Object.keys(plan).forEach(k => {
+            if (!(k in out)) {
+                const kp = k.split('-');
+                if (kp.length >= 2) {
+                    const kx = parseFloat(kp[0]), ky = parseFloat(kp[1]);
+                    for (const ck of Object.keys(out)) {
+                        const cp = ck.split('-');
+                        if (cp.length >= 2 && Math.hypot(parseFloat(cp[0]) - kx, parseFloat(cp[1]) - ky) < 0.2) {
+                            delete out[ck];
+                            break;
+                        }
+                    }
+                }
+            }
+            out[k] = plan[k];
+        });
+        return out;
+    }
+    function mergedStatus() {
+        return viewMode === 'plan' ? mergeStatusOver(areaStatus, viewStatus()) : areaStatus;
+    }
+
+    function planDisplayName(p) {
+        if (!p) return '';
+        return p.id === MAIN_PLAN_ID ? ('🎯 ' + t('planMainLabel')) : ('💡 ' + (p.name || t('planProposalName', { name: p.author || '?' })));
+    }
+    function canDeletePlan(p) {
+        return !!p && p.id !== MAIN_PLAN_ID && (isAdmin() || p.owner === getDeviceId());
+    }
+    function canClearPlan(p) {
+        return !!p && (p.id === MAIN_PLAN_ID || isAdmin() || p.owner === getDeviceId());
+    }
+
+    function markPlanDirty() {
+        planDirty = true;
+        planSyncState = 'dirty';
+        updateViewBanner();
+        clearTimeout(planSaveTimer);
+        planSaveTimer = setTimeout(() => { syncPlans({ silent: true }); }, 1500);
+    }
+    function touchPlan(p) {
+        p.updatedAt = new Date().toISOString();
+        markPlanDirty();
+    }
+
+    // ---- 見た目の更新 ----
+    function updateViewBanner() {
+        const el = document.getElementById('viewBanner');
+        if (!el) return;
+        const txt = document.getElementById('viewBannerText');
+        const btn = document.getElementById('viewBannerBtn');
+        let show = false, text = '', showBtn = false;
+        if (viewMode === 'plan') {
+            const p = plansData[activePlanId] || plansData[MAIN_PLAN_ID];
+            const stKey = { idle: '', dirty: 'syncDirty', saving: 'syncSaving', saved: 'syncSaved', error: 'syncError' }[planSyncState];
+            show = true;
+            text = planDisplayName(p) + (stKey ? '　' + t(stKey) : '');
+        } else if (!isAdmin()) {
+            show = true;
+            text = t('bannerReadOnly');
+            showBtn = true;
+        }
+        el.style.display = show ? 'flex' : 'none';
+        el.style.borderColor = viewMode === 'plan' ? '#d97706' : '#334155';
+        if (txt) txt.textContent = text;
+        if (btn) btn.style.display = showBtn ? 'inline-block' : 'none';
+    }
+
+    function refreshViewUI(skipBanner) {
+        const isPlan = viewMode === 'plan';
+        const bc = document.getElementById('viewBtnCurrent'), bp = document.getElementById('viewBtnPlan');
+        if (bc) bc.classList.toggle('active', !isPlan);
+        if (bp) { bp.classList.toggle('active', isPlan); bp.classList.toggle('plan-active', isPlan); }
+
+        const sel = document.getElementById('planSelect');
+        if (sel) {
+            sel.style.display = isPlan ? '' : 'none';
+            if (isPlan) {
+                const ids = Object.keys(plansData).filter(id => id !== MAIN_PLAN_ID)
+                    .sort((a, b) => String(plansData[b].updatedAt).localeCompare(String(plansData[a].updatedAt)));
+                sel.innerHTML = '';
+                [MAIN_PLAN_ID].concat(ids).forEach(id => {
+                    const o = document.createElement('option');
+                    o.value = id;
+                    o.textContent = planDisplayName(plansData[id]);
+                    sel.appendChild(o);
+                });
+                const nw = document.createElement('option');
+                nw.value = '__new__';
+                nw.textContent = t('planNewOption');
+                sel.appendChild(nw);
+                sel.value = plansData[activePlanId] ? activePlanId : MAIN_PLAN_ID;
+            }
+        }
+        const pa = document.getElementById('planActions');
+        if (pa) pa.style.display = isPlan ? 'flex' : 'none';
+        const mg = document.querySelector('#tab-paint .mode-group');
+        if (mg) mg.style.display = isPlan ? 'none' : 'grid';
+        const del = document.getElementById('btnDeletePlan');
+        if (del) del.style.display = (isPlan && canDeletePlan(plansData[activePlanId])) ? '' : 'none';
+        const promo = document.getElementById('btnPromotePlan');
+        if (promo) promo.style.display = (isPlan && activePlanId !== MAIN_PLAN_ID && isAdmin()) ? '' : 'none';
+        if (!skipBanner) updateViewBanner();
+    }
+
+    function setViewMode(mode) {
+        if (mode === viewMode) return;
+        viewMode = mode;
+        if (mode === 'plan') {
+            if (currentMode !== 'paint') setMode('paint');
+            syncPlans({ silent: true });
+            startPlanPolling();
+        } else {
+            stopPlanPolling();
+            if (planDirty) syncPlans({ silent: true });
+        }
+        refreshViewUI();
+        redrawPaintLayer();
+        updateBoard();
+        render();
+    }
+
+    function onPlanSelectChange(val) {
+        if (val === '__new__') {
+            createPlanPrompt();
+            refreshViewUI();
+            return;
+        }
+        if (!plansData[val]) return;
+        activePlanId = val;
+        refreshViewUI();
+        redrawPaintLayer();
+        updateBoard();
+        render();
+    }
+
+    // ---- 案の作成・削除・昇格 ----
+    function createPlanPrompt() {
+        const author = prompt(t('promptPlanAuthor'), getMyName());
+        if (author === null) return;
+        const a = author.trim().slice(0, 20);
+        if (!a) return;
+        try { localStorage.setItem('territory_my_name', a); } catch (e) {}
+        const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        plansData[id] = {
+            id: id,
+            name: t('planProposalName', { name: a }),
+            author: a,
+            owner: getDeviceId(),
+            areaStatus: {},
+            updatedAt: new Date().toISOString()
+        };
+        activePlanId = id;
+        markPlanDirty();
+        refreshViewUI();
+        redrawPaintLayer();
+        updateBoard();
+        render();
+    }
+
+    function deleteActivePlan() {
+        const p = plansData[activePlanId];
+        if (!p || p.id === MAIN_PLAN_ID) { showStatus(t('msgCantDeleteMain'), 'warning'); return; }
+        if (!canDeletePlan(p)) { showStatus(t('msgCantDeletePlan'), 'warning'); return; }
+        if (!confirm(t('confirmDeletePlan', { name: p.name }))) return;
+        delete plansData[p.id];
+        deletedPlanIds.add(p.id);
+        activePlanId = MAIN_PLAN_ID;
+        markPlanDirty();
+        refreshViewUI();
+        redrawPaintLayer();
+        updateBoard();
+        render();
+    }
+
+    function promoteActivePlan() {
+        if (!guardAdmin()) return;
+        const p = plansData[activePlanId];
+        if (!p || p.id === MAIN_PLAN_ID) return;
+        if (!confirm(t('confirmPromotePlan', { name: p.name }))) return;
+        plansData[MAIN_PLAN_ID].areaStatus = clonePlain(p.areaStatus);
+        touchPlan(plansData[MAIN_PLAN_ID]);
+        activePlanId = MAIN_PLAN_ID;
+        refreshViewUI();
+        redrawPaintLayer();
+        updateBoard();
+        render();
+        showStatus(t('msgPromoted'), 'success');
+    }
+
+    function clearViewPaint() {
+        if (viewMode === 'plan') {
+            const p = plansData[activePlanId];
+            if (!p) return;
+            if (!canClearPlan(p)) { showStatus(t('msgCantClearPlan'), 'warning'); return; }
+            if (!confirm(t('confirmClearPlan', { name: planDisplayName(p) }))) return;
+            p.areaStatus = {};
+            touchPlan(p);
+            redrawPaintLayer();
+            updateBoard();
+            render();
+            return;
+        }
+        if (!guardAdmin()) return;
+        if (!confirm(t('confirmClearPaint'))) return;
+        areaStatus = {};
+        startPositions = [];
+        homePos = null;
+        redrawPaintLayer();
+        render();
+        updateBoard();
+        saveLocal();
+    }
+
+    // 管理タブ：予定を現状に反映（占領が終わったら）
+    function applyPlanToCurrent() {
+        if (!guardAdmin()) return;
+        const main = plansData[MAIN_PLAN_ID];
+        if (!main || Object.keys(main.areaStatus).length === 0) { showStatus(t('msgMainPlanEmpty'), 'warning'); return; }
+        if (!confirm(t('confirmApplyPlan'))) return;
+        areaStatus = mergeStatusOver(areaStatus, main.areaStatus);
+        saveLocal();
+        if (confirm(t('confirmClearPlanAfter'))) {
+            main.areaStatus = {};
+            touchPlan(main);
+        }
+        redrawPaintLayer();
+        updateBoard();
+        render();
+        showStatus(t('msgPlanApplied'), 'success');
+    }
+
+    function clearMainPlan() {
+        if (!guardAdmin()) return;
+        if (!confirm(t('confirmClearMainPlan'))) return;
+        plansData[MAIN_PLAN_ID].areaStatus = {};
+        touchPlan(plansData[MAIN_PLAN_ID]);
+        if (viewMode === 'plan') { redrawPaintLayer(); render(); }
+        updateBoard();
+        showStatus(t('msgMainPlanCleared'), 'success');
+    }
+
+    // ---- 予定ドキュメントの保存・取得（3-way merge＋楽観ロック） ----
+    function packData(obj) {
+        const json = JSON.stringify(obj);
+        try {
+            if (window.LZString && typeof window.LZString.compressToEncodedURIComponent === 'function') {
+                return window.LZString.compressToEncodedURIComponent(json);
+            }
+        } catch (e) {}
+        return encodeURIComponent(json);
+    }
+    function unpackData(text) {
+        let data = null;
+        try {
+            if (window.LZString) {
+                const dec = window.LZString.decompressFromEncodedURIComponent(text) || window.LZString.decompress(text);
+                if (dec) data = JSON.parse(dec);
+            }
+        } catch (e) {}
+        if (!data) {
+            try {
+                const dec = decodeURIComponent(text);
+                if (dec && dec.charAt(0) === '{') data = JSON.parse(dec);
+            } catch (e) {}
+        }
+        if (!data) {
+            try { data = JSON.parse(text); } catch (e) {}
+        }
+        return data;
+    }
+
+    function sanitizePlans(raw) {
+        const out = {};
+        Object.keys(raw || {}).forEach(id => {
+            const p = raw[id];
+            if (!p || typeof p !== 'object') return;
+            out[id] = {
+                id: id,
+                name: String(p.name || '').slice(0, 40),
+                author: String(p.author || '').slice(0, 20),
+                owner: String(p.owner || ''),
+                areaStatus: (p.areaStatus && typeof p.areaStatus === 'object') ? p.areaStatus : {},
+                updatedAt: String(p.updatedAt || '')
+            };
+        });
+        if (!out[MAIN_PLAN_ID]) out[MAIN_PLAN_ID] = defaultMainPlan();
+        return out;
+    }
+
+    function plansDocUrl() {
+        return FIREBASE_REST_BASE + encodeURIComponent(currentRoom + '__plans');
+    }
+
+    async function fetchPlansDoc() {
+        const res = await fetch(plansDocUrl() + '?key=' + FIREBASE_API_KEY);
+        if (res.status === 404) return { plans: null, updateTime: null };
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const doc = await res.json();
+        const text = doc.fields && doc.fields.str && doc.fields.str.stringValue;
+        const data = text ? unpackData(text) : null;
+        return {
+            plans: (data && data.plans) ? sanitizePlans(data.plans) : null,
+            updateTime: doc.updateTime || null
+        };
+    }
+
+    async function writePlansDoc(plans, updateTime) {
+        let url = plansDocUrl() + '?key=' + FIREBASE_API_KEY;
+        url += updateTime
+            ? '&currentDocument.updateTime=' + encodeURIComponent(updateTime)
+            : '&currentDocument.exists=false';
+        const res = await fetch(url, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fields: {
+                    str: { stringValue: packData({ v: 1, plans: plans }) },
+                    updatedAt: { stringValue: new Date().toISOString() }
+                }
+            })
+        });
+        if (res.ok) {
+            const j = await res.json();
+            return { ok: true, updateTime: j.updateTime || null };
+        }
+        // 他の人が先に書き込んだ（前提条件エラー）→ 取り直してやり直す
+        if (res.status === 400 || res.status === 404 || res.status === 409 || res.status === 412) {
+            return { ok: false };
+        }
+        throw new Error('HTTP ' + res.status);
+    }
+
+    // base(前回同期時) と local(今の手元) の差分だけを remote(クラウド最新) に重ねる
+    function mergeStatusMaps(base, local, remote) {
+        const out = Object.assign({}, remote);
+        const keys = new Set(Object.keys(base || {}).concat(Object.keys(local || {})));
+        keys.forEach(k => {
+            const b = base ? base[k] : undefined, l = local ? local[k] : undefined;
+            if (b === l) return;              // 手元では変えていないマスはクラウドの内容を優先
+            if (l === undefined) delete out[k];
+            else out[k] = l;
+        });
+        return out;
+    }
+
+    function mergePlanSets(localPlans, basePlans, remotePlans, deletedIds) {
+        const out = clonePlain(remotePlans);
+        Object.keys(localPlans).forEach(id => {
+            const lp = localPlans[id], bp = basePlans[id];
+            if (!out[id]) {
+                if (!bp) out[id] = clonePlain(lp);   // 手元で新しく作った案
+                return;                               // クラウド側で消された案は復活させない
+            }
+            out[id].areaStatus = mergeStatusMaps(bp ? bp.areaStatus : {}, lp.areaStatus, out[id].areaStatus);
+            if (bp && lp.name !== bp.name) out[id].name = lp.name;
+            if (lp.updatedAt && (!bp || lp.updatedAt !== bp.updatedAt) && lp.updatedAt > (out[id].updatedAt || '')) {
+                out[id].updatedAt = lp.updatedAt;
+            }
+        });
+        deletedIds.forEach(id => { if (id !== MAIN_PLAN_ID) delete out[id]; });
+        if (!out[MAIN_PLAN_ID]) out[MAIN_PLAN_ID] = defaultMainPlan();
+        return out;
+    }
+
+    async function syncPlans(opts) {
+        opts = opts || {};
+        if (planSyncing) { planSyncAgain = true; return; }
+        planSyncing = true;
+        clearTimeout(planSaveTimer);
+        const hadDirty = planDirty;
+        if (hadDirty) { planSyncState = 'saving'; updateViewBanner(); }
+        if (opts.manual) showStatus(t(hadDirty ? 'msgPlanSaving' : 'msgPlanFetching'), 'loading');
+        const btnS = document.getElementById('btnSaveCloud'), btnF = document.getElementById('btnFetchCloud');
+        if (opts.manual) { if (btnS) btnS.disabled = true; if (btnF) btnF.disabled = true; }
+
+        try {
+            let merged = null, snapshot = null, snapDeleted = null;
+            for (let attempt = 0; attempt < 4 && !merged; attempt++) {
+                const remote = await fetchPlansDoc();
+                snapshot = clonePlain(plansData);
+                snapDeleted = new Set(deletedPlanIds);
+                const m = remote.plans
+                    ? mergePlanSets(plansData, planBaseline, remote.plans, deletedPlanIds)
+                    : mergePlanSets(plansData, {}, { main: defaultMainPlan() }, deletedPlanIds);
+                if (!planDirty) { merged = m; break; }          // 手元に未保存の変更なし → 取り込むだけ
+                const w = await writePlansDoc(m, remote.updateTime);
+                if (w.ok) merged = m;
+            }
+            if (!merged) throw new Error('conflict');
+
+            // 同期中に手元で起きた編集（snapshot以降の差分）を、マージ結果の上に載せ直す
+            const lateDeleted = new Set(Array.from(deletedPlanIds).filter(id => !snapDeleted.has(id)));
+            const before = JSON.stringify((plansData[activePlanId] || {}).areaStatus || {});
+            const finalPlans = mergePlanSets(plansData, snapshot, merged, lateDeleted);
+            planBaseline = clonePlain(merged);
+            plansData = finalPlans;
+            deletedPlanIds = lateDeleted;
+            planDirty = JSON.stringify(finalPlans) !== JSON.stringify(merged);
+            if (!plansData[activePlanId]) activePlanId = MAIN_PLAN_ID;
+            planSyncState = planDirty ? 'dirty' : 'saved';
+
+            refreshViewUI();
+            const after = JSON.stringify((plansData[activePlanId] || {}).areaStatus || {});
+            if (viewMode === 'plan' && before !== after) redrawPaintLayer();
+            updateBoard();
+            render();
+            if (opts.manual) showStatus(t(hadDirty ? 'msgPlanSaved' : 'msgPlanSynced'), 'success');
+            if (planDirty) planSyncAgain = true;
+        } catch (err) {
+            console.error(err);
+            planSyncState = hadDirty || planDirty ? 'error' : planSyncState;
+            updateViewBanner();
+            if (opts.manual || hadDirty) showStatus(t('msgPlanSaveError', { err: (err.message || t('errCommFailed')) }), 'error');
+        } finally {
+            planSyncing = false;
+            if (opts.manual) { if (btnS) btnS.disabled = false; if (btnF) btnF.disabled = false; }
+            if (planSyncAgain) { planSyncAgain = false; syncPlans({ silent: true }); }
+        }
+    }
+
+    function startPlanPolling() {
+        stopPlanPolling();
+        planPollTimer = setInterval(() => {
+            if (!document.hidden && viewMode === 'plan') syncPlans({ silent: true });
+        }, 25000);
+    }
+    function stopPlanPolling() {
+        if (planPollTimer) clearInterval(planPollTimer);
+        planPollTimer = null;
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && viewMode === 'plan') syncPlans({ silent: true });
+    });
+
+    // 上部ボタンの「いま見ている側」に応じた保存・取得
+    function saveCurrentView() {
+        if (viewMode === 'plan') syncPlans({ manual: true });
+        else saveToCloud();
+    }
+    function fetchCurrentView() {
+        if (viewMode === 'plan') syncPlans({ manual: true });
+        else loadFromCloud(true);
+    }
+
+    // ---- 予定レイヤーの描画（現状は薄く、予定は縞模様で重ねる） ----
+    function getStripePattern() {
+        if (stripePattern) return stripePattern;
+        const tile = document.createElement('canvas');
+        tile.width = 16; tile.height = 16;
+        const tc = tile.getContext('2d');
+        tc.strokeStyle = '#000';
+        tc.lineWidth = 6;
+        tc.beginPath();
+        tc.moveTo(-4, 20); tc.lineTo(20, -4);
+        tc.moveTo(-4, 4); tc.lineTo(4, -4);
+        tc.moveTo(12, 20); tc.lineTo(20, 12);
+        tc.stroke();
+        stripePattern = sCtx.createPattern(tile, 'repeat');
+        return stripePattern;
+    }
+
+    function drawPlanLayer() {
+        ctx.globalAlpha = 0.4;
+        ctx.drawImage(paintCanvas, 0, 0);
+        ctx.globalAlpha = 1;
+        if (stripeCanvas.width !== paintCanvas.width || stripeCanvas.height !== paintCanvas.height) {
+            stripeCanvas.width = paintCanvas.width;
+            stripeCanvas.height = paintCanvas.height;
+            stripePattern = null;
+        }
+        sCtx.globalCompositeOperation = 'source-over';
+        sCtx.clearRect(0, 0, stripeCanvas.width, stripeCanvas.height);
+        sCtx.drawImage(paintCanvas, 0, 0);
+        sCtx.globalCompositeOperation = 'destination-in';
+        sCtx.fillStyle = getStripePattern();
+        sCtx.fillRect(0, 0, stripeCanvas.width, stripeCanvas.height);
+        sCtx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(stripeCanvas, 0, 0);
     }
 
     // -------------------------------------------------------------
@@ -1755,6 +2776,7 @@
     }
 
     async function saveToCloud() {
+        if (!guardAdmin()) return;   // 現状を保存できるのは管理者だけ
         const btn = document.getElementById('btnSaveCloud');
         if (btn) btn.disabled = true;
         showStatus(t('msgSavingCloud', { room: currentRoom }), 'loading');
@@ -1771,7 +2793,8 @@
             pointsConfig: pointsConfig,
             targetScore: targetScore,
             mapImage: customMapImage,
-            customColorNames: customColorNames
+            customColorNames: customColorNames,
+            adminPinHash: adminPinHash
         };
 
         saveLocal();
@@ -1878,6 +2901,7 @@
                 if (data.customColorNames && typeof data.customColorNames === 'object') {
                     customColorNames = data.customColorNames;
                 }
+                adminPinHash = (typeof data.adminPinHash === 'string') ? data.adminPinHash : '';
                 if (data.territories && Array.isArray(data.territories)) {
                     // 注: 以前は「.length > 0」の条件があり、他端末がマスを
                     // 全消去して保存した場合にその「空」の状態が反映されず、
@@ -1895,6 +2919,7 @@
                 refreshColorSelectLabels();
 
                 saveLocal();
+                refreshAccessUI();
                 redrawPaintLayer();
                 updateBoard();
                 render();
@@ -1924,6 +2949,7 @@
     // として確実に新しい名前に移せるようにするための機能。
     // 元の部屋名のデータは削除せずそのまま残す。
     async function renameCurrentRoom() {
+        if (!guardAdmin()) return;
         const input = prompt(t('promptRenameRoom', { room: currentRoom }), currentRoom);
         if (input === null) return;
         const trimmed = input.trim();
@@ -1938,6 +2964,7 @@
         }
         const oldRoom = currentRoom;
         currentRoom = sanitized;
+        try { if (adminPinHash) localStorage.setItem(adminStorageKey(), adminPinHash); } catch (e) {}
         updateRoomHeaderDisplay();
         try {
             const url = new URL(window.location.href);
@@ -1965,7 +2992,9 @@
                 url.searchParams.set('room', currentRoom);
                 window.history.pushState({}, '', url.toString());
             } catch (e) {}
+            resetPlansForRoom();
             loadLocal();
+            refreshViewUI();
             redrawPaintLayer();
             updateBoard();
             render();
@@ -2031,7 +3060,8 @@
             pointsConfig: pointsConfig,
             targetScore: targetScore,
             mapImage: customMapImage,
-            customColorNames: customColorNames
+            customColorNames: customColorNames,
+            adminPinHash: adminPinHash
         };
         localStorage.setItem('territory_save_room_' + currentRoom, JSON.stringify(state));
     }
@@ -2062,7 +3092,9 @@
                 if (Object.prototype.hasOwnProperty.call(parsed, 'mapImage')) {
                     customMapImage = parsed.mapImage || null;
                 }
+                adminPinHash = (typeof parsed.adminPinHash === 'string') ? parsed.adminPinHash : '';
             } else {
+                adminPinHash = '';
                 areaStatus = {};
                 startPositions = [];
                 homePos = null;
@@ -2077,7 +3109,13 @@
         // イベント」が新しい画像を巻き添えで非表示にしてしまう競合があった。
         applyMapImageSrc();
         refreshColorSelectLabels();
+        refreshAccessUI();
     }
+
+    ['pinInput1', 'pinInput2'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitPinModal(); });
+    });
 
     window.addEventListener('DOMContentLoaded', initUI);
     if (document.readyState === 'complete' || document.readyState === 'interactive') {
