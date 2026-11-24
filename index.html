@@ -131,6 +131,7 @@
                 <button class="btn-room" style="background:#2563eb;" onclick="copyRoomLink()" title="ギルメンにURLを共有" data-i18n="btnShare" data-i18n-title="btnShareTitle">🔗 共有</button>
                 <button class="btn-room" style="background:#d97706;" onclick="promptSwitchRoom()" title="別の部屋に移動または新規作成" data-i18n="btnSwitch" data-i18n-title="btnSwitchTitle">切替/新規</button>
                 <button class="btn-room" style="background:#4b5563;" onclick="renameCurrentRoom()" title="今表示中のデータを、新しい部屋名でそのまま保存し直します" data-i18n="btnRename" data-i18n-title="btnRenameTitle">🏷️ リネーム</button>
+                <button class="btn-room" style="background:#0e7490;" onclick="openHelp()" title="使い方" data-i18n-title="btnHelpTitle">❓</button>
                 <button class="btn-room" style="background:#334155;" onclick="toggleLanguage()" id="btnLangToggle" title="表示言語を切り替えます / Switch display language">🌐 EN</button>
             </div>
         </div>
@@ -375,6 +376,17 @@
 
 <div id="statusMessage" class="status-msg"></div>
 
+<!-- 使い方モーダル -->
+<div id="helpModal" onclick="if(event.target===this)closeHelp()" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:14px;">
+    <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:420px; width:100%; max-height:86vh; color:#f5f5f5; display:flex; flex-direction:column; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7);">
+        <div style="padding:12px 16px; border-bottom:1px solid #404040; font-weight:bold; font-size:14px; color:#fbbf24;" data-i18n="helpTitle">❓ 使い方</div>
+        <div id="helpBody" style="padding:12px 16px; overflow-y:auto; -webkit-overflow-scrolling:touch; font-size:12px; line-height:1.7; color:#d4d4d4;"></div>
+        <div style="padding:10px 16px; border-top:1px solid #404040; text-align:right;">
+            <button type="button" onclick="closeHelp()" style="padding:6px 18px; background:#2563eb; border:1px solid #3b82f6; color:white; font-weight:bold; border-radius:6px; font-size:12px; cursor:pointer;" data-i18n="btnClose">閉じる</button>
+        </div>
+    </div>
+</div>
+
 <!-- 合言葉の入力・設定モーダル -->
 <div id="pinModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:10000; align-items:center; justify-content:center; padding:16px;">
     <div style="background:#171717; border:1px solid #404040; border-radius:12px; max-width:340px; width:100%; color:#f5f5f5; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.7);">
@@ -451,6 +463,10 @@
             btnCloudSaveTitle: '部屋名のデータとしてFirebaseクラウドに保存',
             btnCloudFetch: '最新取得',
             btnCloudFetchTitle: 'Firebaseクラウドから最新の戦況を取得',
+            btnClose: '閉じる',
+            helpTitle: '❓ 使い方',
+            btnHelpTitle: '使い方',
+            helpBody: '<style>.hh{color:#fbbf24;font-weight:bold;margin:10px 0 2px}</style><div class="hh">📌 まず知っておくこと</div>\n「<b>現状</b>」はいま実際の戦況。編集できるのは管理者だけです。「<b>予定・案</b>」は作戦用で、<b>誰でも</b>自由に塗れます（現状は変わりません）。\n<div class="hh">🎨 塗り方（予定・案／管理者の現状）</div>\n①「塗る」タブで同盟の色を選ぶ ②マップのマスをタップ。同じ色をもう一度タップすると消えます。\n<div class="hh">🗺 マップの操作</div>\n2本指でつまんで拡大・縮小、2本指で移動。「↺ 拡大リセット」で全体表示に戻ります。\n<div class="hh">💡 作戦を立てる（誰でもOK）</div>\n①上の「予定・案」を押す ②「📌 次回占領予定」＝管理者の予定。「＋新しい案を作る…」＝自分の案（名前が付きます） ③マスを塗ると、現状に重ねた結果の<b>得点と増減</b>が「得点」タブに出ます。④変更は自動でクラウドに保存され、みんなに共有されます。🔄で最新を取得。\n<div class="hh">📊 得点タブ</div>\n同盟ごとの得点・マス数・達成率。予定表示中は現状との差（＋／−）も出ます。\n<div class="hh">🔑 管理者向け</div>\n「⚙️ 管理」タブで合言葉を設定すると、現状の編集とマップ管理が管理者だけになります。現状を保存するには「☁️」ボタン。予定を現状に反映するには「✅ 予定を現状に反映」→ ☁️で保存。<br>合言葉は“うっかり防止”の簡易ロックです。\n<div class="hh">🚪 部屋・共有</div>\n「🔗 共有」でこの部屋のURLをコピーしてギルメンに送れます。「切替/新規」で別の部屋へ。「🌐 EN」で英語に切替。',
             viewCurrent: '現状',
             viewPlan: '予定・案',
             tabPaint: '🎨 塗る',
@@ -633,6 +649,10 @@
             btnCloudSaveTitle: "Save this room's data to the Firebase cloud",
             btnCloudFetch: 'Fetch Latest',
             btnCloudFetchTitle: 'Get the latest battle state from the Firebase cloud',
+            btnClose: 'Close',
+            helpTitle: '❓ How to use',
+            btnHelpTitle: 'How to use',
+            helpBody: '<style>.hh{color:#fbbf24;font-weight:bold;margin:10px 0 2px}</style><div class="hh">📌 The basics</div>\n<b>Current</b> is the real battle state; only the admin can edit it. <b>Plans</b> is for strategy and <b>anyone</b> can paint there (Current is never changed).\n<div class="hh">🎨 Painting (Plans / admin\'s Current)</div>\n1) Pick an alliance color in the Paint tab. 2) Tap a cell on the map. Tap the same color again to erase it.\n<div class="hh">🗺 Map controls</div>\nPinch to zoom, two fingers to pan. "↺ Reset zoom" shows the whole map again.\n<div class="hh">💡 Make a plan (anyone)</div>\n1) Tap "Plans" at the top. 2) "📌 Next target" is the admin\'s plan; "+ New proposal…" makes your own (with your name). 3) Paint cells; the Score tab shows the result laid over Current, with gains/losses. 4) Changes auto-save to the cloud and are shared. Use 🔄 to fetch the latest.\n<div class="hh">📊 Score tab</div>\nScore, cell count and progress per alliance. In Plans it also shows the difference from Current (+/−).\n<div class="hh">🔑 For the admin</div>\nSet a passphrase in the ⚙️ Admin tab so only you can edit Current and manage the map. Save Current with the ☁️ button. To apply a plan: "✅ Apply plan to Current", then ☁️. The passphrase is only a light lock against accidents.\n<div class="hh">🚪 Rooms & sharing</div>\n"🔗 Share" copies this room\'s URL for your guild. "Switch/New" moves to another room. "🌐 JA" switches the language.',
             viewCurrent: 'Current',
             viewPlan: 'Plans',
             tabPaint: '🎨 Paint',
@@ -2084,6 +2104,12 @@
         document.getElementById('pinModal').style.display = 'flex';
         setTimeout(() => { try { i1.focus(); } catch (e) {} }, 60);
     }
+
+    function openHelp() {
+        document.getElementById('helpBody').innerHTML = t('helpBody');
+        document.getElementById('helpModal').style.display = 'flex';
+    }
+    function closeHelp() { document.getElementById('helpModal').style.display = 'none'; }
 
     function closePinModal() {
         document.getElementById('pinModal').style.display = 'none';
